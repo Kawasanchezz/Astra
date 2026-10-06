@@ -1,0 +1,238 @@
+/* =====================================================================
+   ASTRA — layout de CELULAR (inspirado no app do Claude)
+
+   Carregado pelo index.html com media="(max-width: 640px)", logo DEPOIS do
+   style.css: o navegador só aplica este arquivo em tela de celular, então o
+   desktop continua exatamente como o style.css o define.
+
+   Aqui só muda a DISPOSIÇÃO (botões redondos nos cantos, logo + frase no
+   centro, campo de mensagem na base, menu lateral em gaveta). Cores, vidro,
+   azul e temas continuam vindo das variáveis do style.css.
+   ===================================================================== */
+
+body { padding: 0; overflow: hidden; }
+
+/* tela cheia, sem moldura: o painel é a própria tela */
+.app,
+.app.is-chatting {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* ── BOTÕES REDONDOS NOS CANTOS (menu à esquerda, anônimo à direita) ── */
+.sidebar-open,
+.anon-btn {
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-sm);
+}
+.sidebar-open { left: 14px; }
+.anon-btn { right: 14px; }
+.anon-btn :is(i, svg) { width: 22px; height: 22px; }
+
+/* ícone do menu: três linhas de tamanhos diferentes, como no Claude. Desenhado
+   por máscara para herdar a cor do tema (currentColor) sem mexer no HTML. */
+.sidebar-open :is(i, svg) { display: none; }
+.sidebar-open::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h11M4 17h7'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h11M4 17h7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ── INÍCIO: logo em cima, frase embaixo, tudo no centro ── */
+.hero {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-top: 72px;
+  padding-bottom: 12px;
+  justify-content: center;
+}
+.orb-img { width: 42px; max-width: none; }
+.hero__headline { font-size: clamp(1.7rem, 7.4vw, 2.1rem); }
+
+/* ── CAMPO DE MENSAGEM NA BASE ── */
+.app .prompt,
+.app.is-chatting .prompt {
+  margin: 0;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.prompt__box {
+  width: 100%;
+  padding: 14px 12px 10px 18px;
+  border-radius: 28px;
+}
+.prompt__box textarea {
+  min-height: 44px;
+  font-size: 17px;            /* 16px+ evita o zoom automático do iOS ao focar */
+  line-height: 1.5;
+}
+.prompt__controls {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.prompt__controls-left,
+.prompt__controls-right { flex: 0 0 auto; justify-content: flex-start; }
+
+/* botões só com ícone: font-size 0 esconde as palavras "Attach" e "Send" */
+.ctrl-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0;
+}
+.ctrl-btn :is(i, svg) { width: 20px; height: 20px; }
+.ctrl-btn--send { width: 46px; height: 46px; }
+
+/* ── CONVERSA: respostas direto na página, sem avatar nem balão ── */
+.chat__scroll { padding: 72px 16px 96px; }
+.msg--user .msg__bubble { max-width: 86%; }
+.msg--bot .msg__bubble {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ── MENU LATERAL EM GAVETA ── */
+.sidebar {
+  left: 0;
+  top: 0;
+  width: min(86vw, 340px);
+  height: 100%;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px 0;
+  border-radius: 0 24px 24px 0;
+}
+.sidebar__wordmark { font-size: 1.3rem; }
+.sidebar__collapse {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--glass-strong);
+}
+.sidebar__collapse :is(i, svg) { width: 20px; height: 20px; }
+
+.sidebar__section { margin: 20px 6px 6px; font-size: 0.78rem; }
+.sidebar__list { padding-bottom: 92px; }   /* respiro para os botões flutuantes */
+.history-item { min-height: 52px; padding: 0 6px 0 12px; }
+.history-item__title { font-size: 1rem; }
+.history-item__more { opacity: 1; padding: 8px; }
+.history-item__more :is(i, svg) { width: 18px; height: 18px; }
+
+/* "Nova conversa": pílula azul flutuando no canto, como no app do Claude */
+.side-new {
+  position: absolute;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 2;
+  width: auto;
+  height: 52px;
+  margin: 0;
+  padding: 0 22px 0 18px;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+.side-new :is(i, svg) { width: 20px; height: 20px; }
+
+/* conta: só um círculo com a inicial, no canto oposto */
+.sidebar__foot {
+  position: absolute;
+  left: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 2;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.side-account {
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--glass-strong);
+}
+.side-account::before { content: 'H'; font-size: 1.15rem; font-weight: 700; }
+.side-account__name,
+.side-account__chev { display: none; }
+.side-menu { right: auto; min-width: 240px; bottom: calc(100% + 10px); }
+.side-menu__item { height: 46px; font-size: 0.95rem; }
+
+/* ── CONVERSA ANÔNIMA NO CELULAR ──
+   A janela anônima = faixa de 46px no topo + painel com moldura em volta.
+   Sem este bloco o painel ficava com 100dvh de altura MAIS a faixa, e a base
+   (campo de mensagem e aviso) passava da tela. Aqui o painel ocupa só o que
+   sobra, com moldura fina e igual nos quatro lados, no tema claro e no escuro. */
+.anon-bar { height: calc(46px + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
+:root.is-anon .app,
+:root.is-anon .app.is-chatting {
+  height: calc(100dvh - 46px - env(safe-area-inset-top, 0px) - 6px);
+  min-height: 0;
+  margin: 0 6px 6px;
+  border-radius: 20px;
+}
+/* a faixa e o painel já avisam que é anônimo: o botão do canto não é necessário */
+:root.is-anon .anon-btn,
+:root.is-anon .sidebar-open { display: none; }
+
+/* ── RESPOSTAS SEM ESTOURAR A TELA ──
+   Código, tabelas, gráficos (SVG) e links longos são mais largos que o celular.
+   Em vez de alargar a página (e deixá-la "andar" para o lado), cada um rola
+   DENTRO do próprio bloco. O min-width:0 é o que faz o flex deixar o balão
+   encolher; sem ele o conteúdo largo esticava a mensagem inteira. */
+html,
+body { overflow-x: hidden; overscroll-behavior-x: none; }
+
+.chat__scroll { overflow-x: hidden; overscroll-behavior: contain; }
+.messages,
+.msg,
+.msg__bubble { min-width: 0; max-width: 100%; }
+.msg--user .msg__bubble { max-width: 86%; }
+.msg__bubble { overflow-wrap: anywhere; word-break: break-word; }
+
+.markdown pre {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.markdown pre code { overflow-wrap: normal; word-break: normal; white-space: pre; }
+
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* imagens e gráficos escalam para caber, mantendo a proporção */
+.markdown img,
+.markdown svg,
+.markdown canvas,
+.markdown video { max-width: 100%; height: auto; }
+.markdown iframe { max-width: 100%; }
+
+/* célula de tabela não quebra palavra no meio (o overflow-wrap do balão
+   partia "Vendas" em "Ven/das"): a tabela larga rola de lado, como o código */
+.markdown th,
+.markdown td { overflow-wrap: normal; word-break: normal; min-width: 7ch; }

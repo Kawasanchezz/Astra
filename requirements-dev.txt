@@ -1,0 +1,3 @@
+# Dependencias so de desenvolvimento (testes). Nao entram no deploy.
+-r requirements.txt
+pytest>=8.0,<9
