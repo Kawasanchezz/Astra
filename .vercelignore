@@ -6,4 +6,3 @@
 servidor/.env
 servidor/servidor_seguro.py
 .git
-dev/
