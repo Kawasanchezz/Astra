@@ -6,4 +6,4 @@ import sys
 os.environ["GROQ_API_KEY"] = "chave-de-teste-nao-usar"
 os.environ["APP_ENV"] = "development"
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "servidor"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "servidor"))

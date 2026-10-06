@@ -36,15 +36,6 @@ HTML/CSS/JS puro.
    ```
 4. Abra http://127.0.0.1:5000
 
-## 🧪 Testes
-
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
-
-Os testes não chamam a IA de verdade (usam um cliente falso).
-
 ## 🚀 Deploy
 
 Funciona na Vercel (`vercel.json` já incluso) ou em qualquer host Python com
