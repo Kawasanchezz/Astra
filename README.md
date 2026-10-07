@@ -2,7 +2,7 @@
 
 <img src="landing-page/assets/images/logo-astra.png" alt="Logo da Astra: uma estrela dourada de pontas irregulares" width="200">
 
-# Astra — Seu Mentor de Programação
+# Astra
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
