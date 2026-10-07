@@ -57,4 +57,3 @@ Todas as opções estão comentadas em [`servidor/.env.example`](servidor/.env.e
 ## 📄 Licença
 
 MIT — veja [LICENSE](LICENSE).
-# Astra
