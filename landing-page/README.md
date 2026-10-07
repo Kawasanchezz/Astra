@@ -7,7 +7,7 @@ Landing (glassmorphism + minimal + futurista) da **Astra**, uma **IA de TI** (pr
 - **Tema preto · branco · dourado**, com alternador **Sistema / Claro / Escuro**
   (a paleta inteira é trocada por tokens CSS; nenhuma regra de layout é reescrita)
 - **Painel central de vidro** com gradiente, `backdrop-filter` e sombra suave
-- **Sidebar recolhível** no estilo do Claude: fechada por padrão (a home fica
+- **Sidebar recolhível** no estilo de apps de chat: fechada por padrão (a home fica
   limpa, só com o quadradinho no canto), abre empurrando o conteúdo no desktop
   e sobrepondo com véu no mobile
   - nova conversa · início · lista de conversas · menu do rodapé

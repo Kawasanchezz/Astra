@@ -183,19 +183,7 @@ docker-compose.override.yml
 .mysql_history
 .psql_history
 
-# --- ferramentas de agente (Claude Code / MCP / IA) ---
-.claude/settings.local.json
-.claude/**/*.local.json
-.claude/history/
-.claude/logs/
-.claude/cache/
-.claude/.credentials.json
-.claude/mcp-auth/
-.claude/projects/
-.claude/todos/
-.claude/shell-snapshots/
 .mcp.local.json
-CLAUDE.local.md
 .aider*
 .cursor/
 .cursorrules.local
@@ -247,6 +235,3 @@ Desktop.ini
 ehthumbs.db
 $RECYCLE.BIN/
 *.local
-# --- Claude Code (nao subir) ---
-.claude/
-CLAUDE.md

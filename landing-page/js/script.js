@@ -233,7 +233,7 @@ async function copiarTexto(texto) {
   return ok;
 }
 
-/* Bloco de código no estilo do Claude: cabeçalho com a linguagem e botão
+/* Bloco de código no estilo de apps de chat: cabeçalho com a linguagem e botão
    "Copiar" que copia só o código (sem o cabeçalho). Só mexe no DOM e usa
    textContent, então nada do que a IA escreveu vira HTML aqui. */
 function decorarBlocoDeCodigo(pre) {
@@ -779,7 +779,7 @@ addEventListener('keydown', (e) => {
   executarAcaoChat(acao);
 });
 
-// menu do rodapé (no lugar da linha de conta do Claude)
+// menu do rodapé (no lugar da linha de conta de outros apps)
 $('#accountBtn').onclick = (e) => { e.stopPropagation(); toggleAccountMenu(); };
 $('#menuSettings').onclick = () => { toggleAccountMenu(false); checkServer(); $('#settingsModal').hidden = false; };
 $('#menuStatus').onclick = () => { checkServer(); toast('Verificando o servidor…', 1200); };

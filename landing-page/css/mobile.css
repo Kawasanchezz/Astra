@@ -1,5 +1,5 @@
 /* =====================================================================
-   ASTRA — layout de CELULAR (inspirado no app do Claude)
+   ASTRA — layout de CELULAR (inspirado em apps de chat modernos)
 
    Carregado pelo index.html com media="(max-width: 640px)", logo DEPOIS do
    style.css: o navegador só aplica este arquivo em tela de celular, então o
@@ -38,7 +38,7 @@ body { padding: 0; overflow: hidden; }
 .anon-btn { right: 14px; }
 .anon-btn :is(i, svg) { width: 22px; height: 22px; }
 
-/* ícone do menu: três linhas de tamanhos diferentes, como no Claude. Desenhado
+/* ícone do menu: três linhas de tamanhos diferentes, como em apps de chat. Desenhado
    por máscara para herdar a cor do tema (currentColor) sem mexer no HTML. */
 .sidebar-open :is(i, svg) { display: none; }
 .sidebar-open::before {
@@ -136,7 +136,7 @@ body { padding: 0; overflow: hidden; }
 .history-item__more { opacity: 1; padding: 8px; }
 .history-item__more :is(i, svg) { width: 18px; height: 18px; }
 
-/* "Nova conversa": pílula azul flutuando no canto, como no app do Claude */
+/* "Nova conversa": pílula azul flutuando no canto, como em apps de chat */
 .side-new {
   position: absolute;
   right: 16px;

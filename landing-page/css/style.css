@@ -372,7 +372,7 @@ body {
 .side-account__chev { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-soft); transition: transform 0.2s ease; }
 .side-account[aria-expanded="true"] .side-account__chev { transform: rotate(180deg); }
 
-/* o menu sobe a partir do rodape, como o do Claude */
+/* o menu sobe a partir do rodape, como em apps de chat */
 .side-menu {
   position: absolute;
   left: 0;
@@ -577,13 +577,13 @@ body {
 .app.is-chatting .anon-btn { display: none; }
 
 /* A caixa de mensagem do modo anônimo é TRACEJADA (a marca do modo anônimo no
-   Claude). Os tokens existem para o tema claro poder trocar o estilo sem
+   apps de chat). Os tokens existem para o tema claro poder trocar o estilo sem
    duplicar regras: o padrão (escuro) continua com borda contínua. */
 :root { --anon-border-style: solid; }
 .app.is-anon .prompt__box { border-style: var(--anon-border-style); }
 
 /* No tema claro o painel é claro, então a faixa e a moldura ficam PRETAS, como no
-   Claude: o contraste com o painel branco diz que é uma janela à parte. */
+   apps de chat: o contraste com o painel branco diz que é uma janela à parte. */
 :root[data-theme="light"],
 :root[data-theme="system"] {
   --anon-chrome: #111111;
@@ -631,7 +631,7 @@ body {
   margin-top: auto;
   width: 100%;
   display: flex;
-  flex-direction: row;       /* logo AO LADO da frase, como no Claude */
+  flex-direction: row;       /* logo AO LADO da frase, como em apps de chat */
   align-items: center;
   justify-content: center;
   gap: clamp(0.7rem, 1.4vw, 1rem);
@@ -644,7 +644,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  /* saudacao em fonte com serifa, como a do Claude */
+  /* saudacao em fonte com serifa, como a de apps de chat */
   font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
   font-size: clamp(1.9rem, 1.3rem + 2.2vmin, 2.7rem);
   line-height: 1.15;
@@ -666,7 +666,7 @@ body {
 
 /* ── 3D GLASS ORB ── */
 .orb-stage {
-  order: -1;                 /* logo ACIMA da frase, como no Claude */
+  order: -1;                 /* logo ACIMA da frase, como em apps de chat */
   position: relative;
   perspective: 900px;
   display: flex;
@@ -911,7 +911,7 @@ body {
   overflow-y: auto;
   /* o recuo da sidebar agora vem do padding-left do .app, entao aqui o
      padding volta a ser simetrico */
-  /* respiro grande embaixo, como no Claude: a última resposta termina bem acima da
+  /* respiro grande embaixo, como em apps de chat: a última resposta termina bem acima da
      caixa de mensagem em vez de colada nela */
   padding: clamp(24px, 4vh, 44px) clamp(16px, 3vw, 32px) clamp(96px, 18vh, 150px);
   scrollbar-width: thin;
@@ -930,7 +930,7 @@ body {
 }
 
 /* ── MENSAGENS ──
-   Visual limpo, como o do Claude: a resposta é texto direto na página (sem balão
+   Visual limpo, como em apps de chat: a resposta é texto direto na página (sem balão
    nem avatar) e só a mensagem da pessoa fica num balão discreto. */
 .msg { display: flex; gap: 10px; animation: msgIn 0.25s ease; }
 
@@ -1014,7 +1014,7 @@ body {
 }
 
 /* BLOCO DE CÓDIGO: cabeçalho com a linguagem e o botão "Copiar" (montado por
-   decorarBlocoDeCodigo() no script.js). Escuro nos dois temas, como no Claude. */
+   decorarBlocoDeCodigo() no script.js). Escuro nos dois temas, como em apps de chat. */
 .codeblock {
   margin: 4px 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.10);

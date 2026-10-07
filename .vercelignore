@@ -112,17 +112,6 @@ kubeconfig
 .netlify/
 .firebase/
 
-# 4. CLAUDE / IA / MCP
-
-.claude/
-claude/
-CLAUDE.md
-CLAUDE.local.md
-.claude.json
-.claude.json.*
-.claudeignore
-claude_desktop_config.json
-
 .mcp.json
 .mcp.local.json
 .mcp.local.*
@@ -149,7 +138,6 @@ mcp.json
 .copilot/
 .kiro/
 AGENTS.local.md
-
 
 # 5. TESTE DE API (vazam tokens com frequência)
 
@@ -200,8 +188,6 @@ backup*.sql
 .sqlite_history
 .lesshst
 .viminfo
-
-
 
 # 8. GIT / METADADOS (não precisam ir para o deploy)
 
