@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="landing-page/assets/images/logo-astra.png" alt="Logo da Astra: uma estrela dourada de pontas irregulares" width="200">
+<img src="landing-page/assets/images/logo-astra.png" alt="Logo da Astra: uma estrela azul sereno de pontas irregulares" width="200">
 
 # Astra
 
