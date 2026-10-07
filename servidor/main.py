@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import (
@@ -64,7 +65,10 @@ else:
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_SIZE
 
 # Libera o acesso para o nosso frontend
-CORS(app, origins=ALLOWED_ORIGINS)
+# Metodos e headers explicitos (nada de "*"), sem cookies/credenciais cruzando
+# origens e com o preflight cacheado por 10 min.
+CORS(app, origins=ALLOWED_ORIGINS, methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type"], supports_credentials=False, max_age=600)
 
 # Limitador de mensagens (pra ninguem travar o bot mandando 1000 msgs)
 limiter = Limiter(
@@ -92,6 +96,23 @@ def enforce_https():
         return redirect(url, code=301)
 
 
+# O Flask serve a pasta do frontend inteira. Barra o que nunca deve ser publico
+# mesmo que alguem copie por engano para la: arquivos ocultos (.env, .git...),
+# codigo-fonte, docs e configs. Resposta 404 igual a de um arquivo inexistente,
+# para nao confirmar que o arquivo existe.
+_EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
+                         ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",
+                         ".pem", ".key", ".map")
+
+
+@app.before_request
+def bloquear_arquivos_sensiveis():
+    caminho = request.path.lower()
+    partes = [p for p in caminho.split("/") if p]
+    if any(p.startswith(".") for p in partes) or caminho.endswith(_EXTENSOES_BLOQUEADAS):
+        return jsonify({"erro": "Nao encontrado"}), 404
+
+
 # Headers de seguranca (protege contra ataques basicos de navegador)
 @app.after_request
 def security_headers(response):
@@ -102,9 +123,11 @@ def security_headers(response):
     response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-    # So anuncia HSTS quando FORCE_HTTPS estiver ligado (producao atras de proxy TLS);
-    # em dev HTTP puro nao faz sentido pedir ao navegador para forcar HTTPS.
-    if FORCE_HTTPS:
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    # Anuncia HSTS em producao (a Vercel e outros hosts terminam o TLS e o site
+    # so existe em HTTPS) ou quando FORCE_HTTPS estiver ligado. Em dev HTTP puro
+    # nao faz sentido pedir ao navegador para forcar HTTPS.
+    if FORCE_HTTPS or IS_PRODUCTION:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     # CSP sem nenhum host externo: JS, CSS e a fonte Inter sao todos servidos
     # localmente. 'unsafe-inline' nao e preciso em style-src porque o HTML nao
@@ -180,6 +203,9 @@ def chat():
     # So aceita 'modelo' como string; senao usa o padrao do servidor
     if not isinstance(modelo, str):
         modelo = None
+    # Valor vindo do cliente nunca vai cru para o log (quebra de linha forjaria
+    # linhas falsas de log). Fora da allowlist vira "padrao", como no servico.
+    modelo_log = modelo if modelo in ALLOWED_MODELS else None
 
     # Log de USO (nao de conteudo): sem isso um ataque de custo so aparece na
     # fatura. Registra origem truncada e TAMANHO — nunca o que foi escrito.
@@ -187,7 +213,7 @@ def chat():
                 _ip_anonimo(request.remote_addr),
                 len(mensagem),
                 len(historico) if isinstance(historico, list) else 0,
-                modelo or "padrao")
+                modelo_log or "padrao")
 
     # Trava de concorrencia: recusa em vez de enfileirar. Fica DEPOIS de toda a
     # validacao, para que request invalida barata nao ocupe uma vaga.
@@ -250,6 +276,23 @@ def rate_limit_handler(e):
 @app.errorhandler(500)
 def internal_error(e):
     logger.error("Erro interno: %s", type(e).__name__)
+    return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
+
+
+# Rede de seguranca: qualquer erro HTTP (404, 405, 415...) ou excecao nao
+# prevista sai como JSON generico. Nunca devolve stack trace, caminho de arquivo
+# ou texto da excecao ao cliente; o detalhe fica so no log do servidor (e, para
+# excecoes, so o TIPO, que nao carrega dado do usuario).
+@app.errorhandler(HTTPException)
+def erro_http(e):
+    if e.code in (413, 429):          # ja tem mensagem propria acima
+        return e
+    return jsonify({"erro": "Requisicao invalida" if (e.code or 500) < 500 else "Erro no servidor"}), e.code or 500
+
+
+@app.errorhandler(Exception)
+def erro_inesperado(e):
+    logger.error("Excecao nao tratada: %s", type(e).__name__)
     return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
 
 

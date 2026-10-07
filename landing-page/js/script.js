@@ -127,6 +127,17 @@ function escapeHtml(s) {
   ));
 }
 
+/* Links vindos da resposta da IA: abrem em outra aba SEM dar acesso a esta
+   (noopener) nem vazar a origem (noreferrer) — evita "tabnabbing". */
+if (typeof DOMPurify !== 'undefined') {
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A' && node.hasAttribute('href')) {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+}
+
 function renderMarkdown(text) {
   if (typeof marked === 'undefined') return escapeHtml(text);
   try {
