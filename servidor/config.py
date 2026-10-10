@@ -43,7 +43,13 @@ ALLOWED_MODELS = frozenset(_modelos)
 
 # --- Configuracoes do Servidor ---
 # Ambiente: "development" (padrao) ou "production". Controla travas de seguranca.
-APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
+# Na Vercel a propria plataforma define VERCEL=1 e VERCEL_ENV (production /
+# preview / development). Usamos isso como PADRAO seguro: um deploy esquecido sem
+# variaveis no painel nao pode subir como "development" (health detalhado,
+# debug, CORS de localhost). Qualquer variavel definida no painel ainda vence.
+NA_VERCEL = bool(os.environ.get("VERCEL"))
+_PADRAO_ENV = "production" if NA_VERCEL else "development"
+APP_ENV = os.environ.get("APP_ENV", _PADRAO_ENV).strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
 
 PORT = _env_int("PORT", 5000)
@@ -56,7 +62,8 @@ PORT = _env_int("PORT", 5000)
 #   rate limit por request (bypass total do flask-limiter).
 # 1 = atras de exatamente um proxy TLS (nginx, Cloudflare, load balancer...).
 # Use o numero REAL de proxies: um valor alto demais volta a permitir spoofing.
-TRUSTED_PROXY_COUNT = _env_int("TRUSTED_PROXY_COUNT", 0)
+# Na Vercel ha exatamente 1 proxy (a borda deles) na frente do app.
+TRUSTED_PROXY_COUNT = _env_int("TRUSTED_PROXY_COUNT", 1 if NA_VERCEL else 0)
 
 # Debug NUNCA pode ficar ligado em producao: o debugger do Werkzeug expoe um
 # console interativo (= execucao remota de codigo). Em producao forcamos False.
@@ -65,8 +72,18 @@ if IS_PRODUCTION and FLASK_DEBUG:
     logger.warning("FLASK_DEBUG=true ignorado em producao (seguranca): debugger desativado.")
     FLASK_DEBUG = False
 
+def _origens_padrao() -> str:
+    """Padrao do CORS: o dominio publico da Vercel (nunca localhost la)."""
+    if NA_VERCEL:
+        hosts = {os.environ.get("VERCEL_PROJECT_PRODUCTION_URL", ""), os.environ.get("VERCEL_URL", "")}
+        urls = sorted(f"https://{h}" for h in hosts if h)
+        if urls:
+            return ",".join(urls)
+    return "http://localhost:5000"
+
+
 ALLOWED_ORIGINS = [
-    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5000").split(",") if o.strip()
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _origens_padrao()).split(",") if o.strip()
 ]
 
 # Rate limit: memory:// serve pra 1 processo (dev). Em producao com varios
@@ -75,7 +92,7 @@ RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
 # Redireciona HTTP->HTTPS quando ligado (produção atrás de proxy TLS).
 # Fica desligado por padrao pra nao quebrar o dev local em HTTP.
-FORCE_HTTPS = os.environ.get("FORCE_HTTPS", "false").lower() == "true"
+FORCE_HTTPS = os.environ.get("FORCE_HTTPS", "true" if NA_VERCEL else "false").lower() == "true"
 
 # --- Limites de Seguranca ---
 MAX_INPUT_LENGTH = 8000       # Maximo de letras por mensagem (cobre texto + anexos)
