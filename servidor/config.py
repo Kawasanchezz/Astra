@@ -119,7 +119,14 @@ GROQ_MAX_RETRIES = _env_int("GROQ_MAX_RETRIES", 1)
 # E a unica forma de estancar consumo em segundos, sem redeploy de codigo.
 CHAT_ENABLED = os.environ.get("CHAT_ENABLED", "true").strip().lower() != "false"
 RATE_LIMIT_DEFAULT = "60 per minute"
-RATE_LIMIT_CHAT = "20 per minute"
+# Limites por visitante (IP) no /chat. Ajustaveis pelo painel do host sem mexer
+# em codigo. O diario impede que UMA pessoa gaste sozinha a cota de todos.
+RATE_LIMIT_CHAT = os.environ.get("RATE_LIMIT_CHAT", "20 per minute")
+RATE_LIMIT_DIARIO = os.environ.get("RATE_LIMIT_DIARIO", "150 per day")
+
+# Teto de tokens da RESPOSTA da IA. E o maior multiplicador de custo/cota por
+# pedido: reduzir pela metade corta quase pela metade o consumo de saida.
+MAX_TOKENS_RESPOSTA = max(64, min(_env_int("MAX_TOKENS_RESPOSTA", 1024), 4096))
 
 # Teto de chamadas SIMULTANEAS a IA neste processo.
 #

@@ -13,7 +13,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import (
     ALLOWED_ORIGINS, FLASK_DEBUG, PORT,
-    MAX_REQUEST_SIZE, RATE_LIMIT_DEFAULT, RATE_LIMIT_CHAT,
+    MAX_REQUEST_SIZE, RATE_LIMIT_DEFAULT, RATE_LIMIT_CHAT, RATE_LIMIT_DIARIO,
     MAX_INPUT_LENGTH, RATELIMIT_STORAGE_URI, FORCE_HTTPS, RATE_LIMIT_GLOBAL,
     TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, GROQ_API_KEY,
     CHAT_ENABLED, GROQ_MAX_RETRIES, MAX_HISTORY_CHARS, MAX_CONCURRENT_REQUESTS,
@@ -169,7 +169,8 @@ def _ip_anonimo(ip):
 
 
 @app.route("/chat", methods=["POST"])
-@limiter.limit(RATE_LIMIT_CHAT)                                # por visitante
+@limiter.limit(RATE_LIMIT_CHAT)                                # por visitante (minuto)
+@limiter.limit(RATE_LIMIT_DIARIO)                              # por visitante (dia)
 @limiter.limit(RATE_LIMIT_GLOBAL, key_func=lambda: "global")   # teto do app todo
 def chat():
     # KILL SWITCH: desliga so o /chat, o resto do site continua no ar.
@@ -252,6 +253,7 @@ def health():
         "ambiente": APP_ENV,
         "proxies_confiaveis": TRUSTED_PROXY_COUNT,
         "rate_limit_ip": RATE_LIMIT_CHAT,
+        "rate_limit_diario": RATE_LIMIT_DIARIO,
         "rate_limit_global": RATE_LIMIT_GLOBAL,
         "chat_ativo": CHAT_ENABLED,
         "max_historico_chars": MAX_HISTORY_CHARS,

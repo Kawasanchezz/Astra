@@ -4,7 +4,8 @@ from groq import Groq
 
 from config import (
     GROQ_API_KEY, GROQ_MODEL, GROQ_TIMEOUT, GROQ_MAX_RETRIES,
-    MAX_HISTORY_SIZE, MAX_INPUT_LENGTH, MAX_HISTORY_CHARS, ALLOWED_MODELS
+    MAX_HISTORY_SIZE, MAX_INPUT_LENGTH, MAX_HISTORY_CHARS, ALLOWED_MODELS,
+    MAX_TOKENS_RESPOSTA
 )
 from core.seguranca import avaliar_mensagem, mascarar_segredos
 from core.validador import validar_resposta
@@ -21,7 +22,6 @@ else:
 
 # Temperatura baixa: respostas tecnicas precisam ser consistentes e nao criativas
 TEMPERATURA = 0.4
-MAX_TOKENS_RESPOSTA = 2048
 
 # Avisos anexados ao system prompt SO nas requisicoes em que se aplicam. Vao no
 # system (e nao na mensagem do usuario) para que o usuario nao consiga edita-los.
