@@ -56,7 +56,6 @@ RESPOSTAS = {
     ),
 }
 
-
 @dataclass(frozen=True)
 class Veredito:
     """Resultado da avaliação de uma mensagem."""
@@ -64,17 +63,11 @@ class Veredito:
     bloqueado: bool = False
     categoria: str | None = None
     resposta: str | None = None
-    # Texto de injeção dentro de código/dados (ou numa mensagem longa de
-    # discussão): não bloqueia, mas o modelo precisa tratá-lo como dado.
     dado_com_instrucao: bool = False
-
 
 def _bloqueio(categoria: str) -> Veredito:
     return Veredito(bloqueado=True, categoria=categoria, resposta=RESPOSTAS[categoria])
 
-
-# ── normalização ─────────────────────────────────────────────────────────────
-# Letras cirílicas/gregas que parecem latinas (ataque de homóglifos) e leetspeak.
 _CONFUSAVEIS = str.maketrans({
     "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y",
     "і": "i", "ѕ": "s", "ο": "o", "α": "a", "ε": "e", "ι": "i", "ρ": "p",
@@ -82,9 +75,7 @@ _CONFUSAVEIS = str.maketrans({
 _LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t",
                        "@": "a", "$": "s", "!": "i"})
 _INVISIVEIS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060\ufeff]")
-# "s.e.x.o", "p-o-r-n": letras soltas separadas por pontuacao viram a palavra
 _LETRAS_SEPARADAS = re.compile(r"\b(?:\w[.\-_*]){3,}\w\b")
-
 
 def normalizar(texto: str) -> str:
     """Minúsculas, sem acento, sem caracteres invisíveis e sem homóglifos."""
@@ -94,14 +85,10 @@ def normalizar(texto: str) -> str:
     t = _LETRAS_SEPARADAS.sub(lambda m: re.sub(r"[.\-_*]", "", m.group(0)), t)
     return re.sub(r"\s+", " ", t.lower()).strip()
 
-
 _BLOCO_CODIGO = re.compile(r"```.*?(?:```|\Z)", re.DOTALL)
 _CODIGO_INLINE = re.compile(r"`[^`\n]*`")
-# Trecho entre aspas duplas = texto citado/colado ("resuma este texto: '...'"),
-# ou seja, DADO. Só aspas duplas: a aspa simples também é apóstrofo.
 _TRECHO_CITADO = re.compile(r'"[^"\n]{12,}"|“[^”\n]{12,}”|«[^»\n]{12,}»')
 _LINHA_COMENTARIO = re.compile(r"^\s*(?:#|//|--|/\*|\*|<!--).*$", re.MULTILINE)
-
 
 def _sem_codigo(texto: str) -> str:
     """O que a pessoa escreveu FORA de código, comentários e trechos citados."""
@@ -109,7 +96,6 @@ def _sem_codigo(texto: str) -> str:
     t = _CODIGO_INLINE.sub(" ", t)
     t = _TRECHO_CITADO.sub(" ", t)
     return _LINHA_COMENTARIO.sub(" ", t)
-
 
 def _decodificar_base64(texto: str) -> list[str]:
     """Textos legíveis escondidos em Base64 (o formato não muda o conteúdo)."""
@@ -125,11 +111,6 @@ def _decodificar_base64(texto: str) -> list[str]:
             achados.append(decodificado)
     return achados
 
-
-# ── regras ───────────────────────────────────────────────────────────────────
-# Contexto técnico/educacional que DESLIGA o bloqueio automático: a mensagem
-# segue para o modelo, que julga a intenção. Sem isso, "gere uma lista de
-# palavras para o filtro de conteúdo adulto" seria recusada por engano.
 _CONTEXTO_LEGITIMO = re.compile(
     r"\b(filtr\w*|moderac\w*|moderar|detect\w*|bloque\w*|classific\w*|denunci\w*|"
     r"proteg\w*|defend\w*|defesa|mitig\w*|preven\w*|analis\w*|remov\w*|identific\w*|"
@@ -156,15 +137,11 @@ _OBJETO_SEXUAL = (
     r"roleplay\s+(?:sexual|erotic\w*)|sexual\s+roleplay|me\s+excit\w+|"
     r"transar\s+comigo|sexo\s+comigo)"
 )
-# pedido direto ("escreva um conto erotico") ou o objeto antes do verbo
-# ("sexo explicito: escreva uma cena")
 _PEDIDO_SEXUAL = re.compile(
     rf"\b{_VERBO_PEDIDO}\b.{{0,60}}{_OBJETO_SEXUAL}"
     rf"|{_OBJETO_SEXUAL}.{{0,30}}\b(?:escrev\w+|gere|crie|descrev\w+|write|generate|describe)\b"
 )
 
-# Menor + termo sexual EXPLÍCITO. "Educação sexual para adolescentes" não casa:
-# "sexual" sozinho não está na lista de termos explícitos.
 _MENOR = (
     r"(?:crianc\w+|menin[ao]s?|garot[ao]s?|adolescent\w*|infantil|infantis|loli\w*|shota|"
     r"underage|\bminors?\b|child\w*|\bkids?\b|teen\w*|novinh[ao]s?|"
@@ -238,9 +215,6 @@ _PEDIDOS_PROMPT = (
                r".{0,15}\b(?:above|acima)\b"),
 )
 
-# Mensagens longas que contêm a frase costumam ser discussão ou texto colado
-# (ex.: "como me proteger de 'ignore as instruções anteriores'?"). Nelas a
-# frase vira dado para o modelo julgar, não motivo de recusa automática.
 _LIMITE_IMPERATIVO = 300
 
 _PEDIDO_VOLUME = re.compile(
@@ -254,7 +228,6 @@ _SEM_FIM = re.compile(
 )
 _LIMITE_VOLUME = 5000
 
-
 def _volume_excessivo(texto: str) -> bool:
     if _SEM_FIM.search(texto):
         return True
@@ -267,16 +240,12 @@ def _volume_excessivo(texto: str) -> bool:
             return True
     return False
 
-
 def _casa(regras, texto: str) -> bool:
     return any(regra.search(texto) for regra in regras)
-
 
 def _avaliar_texto(texto: str) -> Veredito:
     inteiro = normalizar(texto)
     fora = normalizar(_sem_codigo(texto))
-    # variantes com leetspeak ("p0rn0") só para as regras de intenção; os números
-    # originais ficam intactos para a regra de volume
     inteiro_leet = inteiro.translate(_LEET)
     fora_leet = fora.translate(_LEET)
     legitimo = bool(_CONTEXTO_LEGITIMO.search(inteiro))
@@ -287,9 +256,6 @@ def _avaliar_texto(texto: str) -> Veredito:
     if not legitimo and (_PEDIDO_SEXUAL.search(fora) or _PEDIDO_SEXUAL.search(fora_leet)):
         return _bloqueio(CAT_SEXUAL)
 
-    # Prompt interno e jailbreak: bloqueia o pedido imperativo escrito pela
-    # pessoa. Se a frase só aparece dentro de código, ou numa mensagem longa de
-    # discussão, passa como DADO e o modelo é avisado.
     for categoria, regras in ((CAT_PROMPT, _PEDIDOS_PROMPT), (CAT_JAILBREAK, _PEDIDOS_OVERRIDE)):
         if _casa(regras, fora) or _casa(regras, fora_leet):
             if len(fora) <= _LIMITE_IMPERATIVO:
@@ -306,7 +272,6 @@ def _avaliar_texto(texto: str) -> Veredito:
 
     return Veredito()
 
-
 def avaliar_mensagem(texto: str) -> Veredito:
     """Avalia a mensagem (e qualquer Base64 legível dentro dela)."""
     pior = Veredito()
@@ -318,8 +283,6 @@ def avaliar_mensagem(texto: str) -> Veredito:
             pior = veredito
     return pior
 
-
-# ── segredos ────────────────────────────────────────────────────────────────
 _SEGREDOS_COM_PREFIXO = (
     re.compile(r"\b(gsk_)[A-Za-z0-9]{20,}"),
     re.compile(r"\b(sk-(?:proj-|ant-)?)[A-Za-z0-9_-]{20,}"),
@@ -337,20 +300,17 @@ _ATRIBUICAO = re.compile(
     r"(?i)\b(password|passwd|senha|secret|client_secret|api[_-]?key|apikey|"
     r"access[_-]?token|auth[_-]?token|token|private[_-]?key)\b(\s*[:=]\s*)(['\"]?)([^\s'\";,]{8,})\3"
 )
-# valor que é só marcador/leitura do ambiente, não um segredo de verdade
 _PLACEHOLDER = re.compile(
     r"(?i)coloque|your|seu_|sua_|xxx|\*{3,}|example|exemplo|changeme|placeholder|"
     r"[<>{}]|\$|%|environ|getenv|process\.env|^(?:null|none|true|false)$"
 )
 _MASCARA = "********"
 
-
 def _mascarar_atribuicao(achado: re.Match) -> str:
     nome, separador, aspas, valor = achado.groups()
     if _PLACEHOLDER.search(valor):
         return achado.group(0)
     return f"{nome}{separador}{aspas}{_MASCARA}{aspas}"
-
 
 def mascarar_segredos(texto: str) -> tuple[str, bool]:
     """Troca segredos por marcadores. Devolve (texto_mascarado, achou_algum)."""

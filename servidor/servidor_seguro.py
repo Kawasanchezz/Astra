@@ -3,13 +3,8 @@ import subprocess
 import time
 import sys
 
-
-# Funcao que mata processos travados na porta do bot.
-# Script APENAS de desenvolvimento (Windows). Evitamos shell=True e passamos
-# argumentos como lista (sem interpolar string no shell) por boa pratica -
-# assim nao ha superficie para command injection, mesmo com 'porta' fixo.
 def limpar_porta(porta):
-    porta = int(porta)  # garante que e numero (nunca vira comando)
+    porta = int(porta)
     try:
         saida = subprocess.check_output(["netstat", "-ano"], text=True)
     except (OSError, subprocess.SubprocessError):
@@ -28,13 +23,11 @@ def limpar_porta(porta):
                 pass
             time.sleep(0.5)
 
-
 if __name__ == "__main__":
     print("==========================================")
     print("      INICIALIZADOR DO CHATBOT")
     print("==========================================")
 
-    # Agora o script ja esta dentro da pasta backend
     pasta_backend = os.path.dirname(os.path.abspath(__file__))
     arquivo_main = os.path.join(pasta_backend, "main.py")
 
@@ -47,15 +40,12 @@ if __name__ == "__main__":
     print("[+] Iniciando o sistema...")
 
     try:
-        # Roda o main.py diretamente ja que estao na mesma pasta
         subprocess.run([sys.executable, "main.py"], cwd=pasta_backend)
     except KeyboardInterrupt:
         print("\n[+] Sistema desligado.")
     except Exception as e:
         print(f"\n[X] Erro: {e}")
     finally:
-        # Garante que a porta fica livre ao fechar (Ctrl+C, erro ou saida
-        # normal), mesmo se o main.py nao tiver conseguido se desligar sozinho.
         print("[+] Liberando a porta...")
         limpar_porta(PORTA)
 

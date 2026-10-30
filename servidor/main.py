@@ -17,29 +17,21 @@ from config import (
     MAX_INPUT_LENGTH, RATELIMIT_STORAGE_URI, FORCE_HTTPS, RATE_LIMIT_GLOBAL,
     TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, GROQ_API_KEY,
     CHAT_ENABLED, GROQ_MAX_RETRIES, MAX_HISTORY_CHARS, MAX_CONCURRENT_REQUESTS,
-    IS_PRODUCTION, validar_configuracao
+    IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
 from core.prompt_mestre import PromptMestre
 from services.ia_service import obter_resposta_ia
 
-# Configura o log pra gente ver o que acontece no terminal
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 
-# Verifica se a chave da API ta certinha antes de começar
 validar_configuracao()
 
-# Pasta do frontend: usa FRONTEND_DIR do .env se existir; senão, a landing-page do projeto
-# (landing-page/ é irmã de servidor/ na raiz do repo)
 FRONTEND_DIR = os.environ.get("FRONTEND_DIR") or os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "landing-page")
 )
 logger.info("Servindo frontend de: %s", FRONTEND_DIR)
 
-# O Flask deduz o Content-Type dos estaticos pelo modulo mimetypes, que no
-# Windows consulta o registro do sistema - e la .woff2 normalmente nao existe.
-# Sem isso a fonte sai como "application/octet-stream" em vez de "font/woff2".
-# Registramos explicitamente para o tipo ser o mesmo em qualquer SO.
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("font/woff", ".woff")
 
@@ -47,10 +39,6 @@ app = Flask(__name__,
             static_folder=FRONTEND_DIR,
             static_url_path="")
 
-# Confiar no X-Forwarded-* so faz sentido se existir mesmo um proxy na frente.
-# Aplicar ProxyFix sem proxy deixa qualquer cliente forjar o proprio IP pelo
-# header e, com isso, burlar o rate limit (o flask-limiter usa get_remote_address).
-# Por isso o padrao e 0 = nao confiar em nada; atras de nginx/Cloudflare use 1.
 if TRUSTED_PROXY_COUNT > 0:
     app.wsgi_app = ProxyFix(
         app.wsgi_app,
@@ -64,13 +52,9 @@ else:
     logger.info("ProxyFix desativado: X-Forwarded-* ignorado (IP real do socket).")
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_SIZE
 
-# Libera o acesso para o nosso frontend
-# Metodos e headers explicitos (nada de "*"), sem cookies/credenciais cruzando
-# origens e com o preflight cacheado por 10 min.
 CORS(app, origins=ALLOWED_ORIGINS, methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type"], supports_credentials=False, max_age=600)
 
-# Limitador de mensagens (pra ninguem travar o bot mandando 1000 msgs)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -78,32 +62,19 @@ limiter = Limiter(
     storage_uri=RATELIMIT_STORAGE_URI
 )
 
-# Pega as instrucoes do "Mestre" (como o bot deve agir)
 system_prompt = PromptMestre().get_prompt()
 
-# Vagas para chamadas SIMULTANEAS a IA. Sem isto, abrir N abas anonimas dispara
-# N chamadas ao mesmo tempo: cada uma segura um worker por ate GROQ_TIMEOUT
-# segundos. Recusamos na hora (nao enfileiramos) para o excesso nao virar espera.
 _vagas_ia = threading.BoundedSemaphore(MAX_CONCURRENT_REQUESTS)
 
-
-# Redireciona HTTP -> HTTPS quando FORCE_HTTPS estiver ligado (producao com TLS).
-# request.is_secure respeita o X-Forwarded-Proto graças ao ProxyFix acima.
 @app.before_request
 def enforce_https():
     if FORCE_HTTPS and not request.is_secure:
         url = request.url.replace("http://", "https://", 1)
         return redirect(url, code=301)
 
-
-# O Flask serve a pasta do frontend inteira. Barra o que nunca deve ser publico
-# mesmo que alguem copie por engano para la: arquivos ocultos (.env, .git...),
-# codigo-fonte, docs e configs. Resposta 404 igual a de um arquivo inexistente,
-# para nao confirmar que o arquivo existe.
 _EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
                          ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",
                          ".pem", ".key", ".map")
-
 
 @app.before_request
 def bloquear_arquivos_sensiveis():
@@ -112,27 +83,18 @@ def bloquear_arquivos_sensiveis():
     if any(p.startswith(".") for p in partes) or caminho.endswith(_EXTENSOES_BLOQUEADAS):
         return jsonify({"erro": "Nao encontrado"}), 404
 
-
-# Headers de seguranca (protege contra ataques basicos de navegador)
 @app.after_request
 def security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Cache-Control"] = "no-store"   # evita servir HTML/JS/CSS em cache (dev)
+    response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
-    # Anuncia HSTS em producao (a Vercel e outros hosts terminam o TLS e o site
-    # so existe em HTTPS) ou quando FORCE_HTTPS estiver ligado. Em dev HTTP puro
-    # nao faz sentido pedir ao navegador para forcar HTTPS.
     if FORCE_HTTPS or IS_PRODUCTION:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # CSP sem nenhum host externo: JS, CSS e a fonte Inter sao todos servidos
-    # localmente. 'unsafe-inline' nao e preciso em style-src porque o HTML nao
-    # tem <style> nem atributo style=""; o script mexe em estilo so via CSSOM
-    # (element.style), que a CSP nao governa.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self'; "
@@ -147,14 +109,14 @@ def security_headers(response):
     )
     return response
 
-
-# Rota principal: entrega o site (index.html)
 @app.route("/")
 def index():
+    return app.send_static_file("home.html")
+
+@app.route("/app")
+def aplicativo():
     return app.send_static_file("index.html")
 
-
-# Rota do Chat: onde a magica acontece
 def _ip_anonimo(ip):
     """Trunca o IP para log: identifica a origem sem guardar dado pessoal.
 
@@ -162,90 +124,81 @@ def _ip_anonimo(ip):
     """
     if not ip:
         return "?"
-    if ":" in ip:                                  # IPv6
+    if ":" in ip:
         return ":".join(ip.split(":")[:3]) + "::"
     partes = ip.split(".")
     return ".".join(partes[:3]) + ".x" if len(partes) == 4 else "?"
 
-
 @app.route("/chat", methods=["POST"])
-@limiter.limit(RATE_LIMIT_CHAT)                                # por visitante (minuto)
-@limiter.limit(RATE_LIMIT_DIARIO)                              # por visitante (dia)
-@limiter.limit(RATE_LIMIT_GLOBAL, key_func=lambda: "global")   # teto do app todo
+@limiter.limit(RATE_LIMIT_CHAT)
+@limiter.limit(RATE_LIMIT_DIARIO)
+@limiter.limit(RATE_LIMIT_GLOBAL, key_func=lambda: "global")
 def chat():
-    # KILL SWITCH: desliga so o /chat, o resto do site continua no ar.
-    # Trocar a env var e redeployar leva ~30s — a resposta mais rapida
-    # possivel a um pico de consumo, sem mexer em codigo.
     if not CHAT_ENABLED:
         return jsonify({"erro": "O chat esta temporariamente indisponivel."}), 503
 
+    if IS_PRODUCTION:
+        origem = request.headers.get("Origin")
+        mesmo_site = request.host_url.rstrip("/")
+        if origem not in ALLOWED_ORIGINS and origem != mesmo_site:
+            return jsonify({"erro": "Origem nao permitida"}), 403
+
     dados = request.get_json(silent=True)
 
-    # Aceita apenas objeto JSON (ex.: corpo "42", "texto" ou uma lista tambem sao
-    # JSON valido, mas dados.get() so existe em dict; sem essa checagem, esses
-    # casos quebravam com AttributeError -> 500 em vez de um 400 limpo)
     if not dados or not isinstance(dados, dict):
         return jsonify({"erro": "Dados invalidos"}), 400
 
     mensagem = dados.get("mensagem", "")
-    # Seguranca/robustez: so aceita texto (evita 500 se vier numero/objeto)
     if not isinstance(mensagem, str):
         return jsonify({"erro": "Dados invalidos"}), 400
     mensagem = mensagem.strip()
     if not mensagem:
         return jsonify({"erro": "Mensagem vazia"}), 400
 
-    # Seguranca: nao deixa mandar texto gigante
     if len(mensagem) > MAX_INPUT_LENGTH:
         return jsonify({"erro": "Texto muito longo"}), 400
 
     historico = dados.get("historico", [])
     modelo = dados.get("modelo")
-    # So aceita 'modelo' como string; senao usa o padrao do servidor
     if not isinstance(modelo, str):
         modelo = None
-    # Valor vindo do cliente nunca vai cru para o log (quebra de linha forjaria
-    # linhas falsas de log). Fora da allowlist vira "padrao", como no servico.
     modelo_log = modelo if modelo in ALLOWED_MODELS else None
+    idioma = dados.get("idioma")
+    if not isinstance(idioma, str) or idioma not in IDIOMAS:
+        idioma = None
 
-    # Log de USO (nao de conteudo): sem isso um ataque de custo so aparece na
-    # fatura. Registra origem truncada e TAMANHO — nunca o que foi escrito.
     logger.info("chat ip=%s msg=%dch hist=%dmsg modelo=%s",
                 _ip_anonimo(request.remote_addr),
                 len(mensagem),
                 len(historico) if isinstance(historico, list) else 0,
                 modelo_log or "padrao")
 
-    # Trava de concorrencia: recusa em vez de enfileirar. Fica DEPOIS de toda a
-    # validacao, para que request invalida barata nao ocupe uma vaga.
     if not _vagas_ia.acquire(blocking=False):
         logger.warning("concorrencia no teto (%d chamadas simultaneas); recusando",
                        MAX_CONCURRENT_REQUESTS)
         return jsonify({"erro": "Muitas conversas ao mesmo tempo. Tente em instantes."}), 429
 
     try:
-        # Chama o servico que fala com a IA do Groq
-        resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo)
+        resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo, idioma)
     finally:
-        _vagas_ia.release()   # sempre devolve a vaga, inclusive se estourar
+        _vagas_ia.release()
 
     return jsonify({"resposta": resposta})
 
-
-# Modelos que o /chat aceita. O frontend monta o seletor a partir daqui em vez
-# de manter uma copia da lista: assim os dois nunca divergem quando a allowlist
-# do servidor mudar. Nao expoe nada sensivel - so nomes de modelo publicos.
 @app.route("/models")
 def models():
     return jsonify({"modelos": sorted(ALLOWED_MODELS), "padrao": GROQ_MODEL})
 
+@app.route("/limites")
+def limites():
+    return jsonify({
+        "por_minuto": RATE_LIMIT_CHAT,
+        "por_dia": RATE_LIMIT_DIARIO,
+        "max_caracteres": MAX_INPUT_LENGTH,
+    })
 
-# Rota de teste pra saber se o servidor ta vivo
 @app.route("/health")
 def health():
-    # Em producao a rota e publica: devolve so o basico, sem revelar limites e
-    # configuracao interna. Fora dela, mostra tudo para conferir o deploy.
-    # Nada aqui e segredo: sao numeros e flags, nunca a chave da API.
     if IS_PRODUCTION:
         return jsonify({"status": "Online e Seguro!", "ia_configurada": bool(GROQ_API_KEY)})
     return jsonify({
@@ -263,51 +216,34 @@ def health():
         "ia_configurada": bool(GROQ_API_KEY),
     })
 
-
-# Tratamento de erros amigavel
 @app.errorhandler(413)
 def payload_too_large(e):
     return jsonify({"erro": "Requisicao muito grande"}), 413
 
-
 @app.errorhandler(429)
 def rate_limit_handler(e):
     return jsonify({"erro": "Calma! Muitas mensagens. Espera um pouco."}), 429
-
 
 @app.errorhandler(500)
 def internal_error(e):
     logger.error("Erro interno: %s", type(e).__name__)
     return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
 
-
-# Rede de seguranca: qualquer erro HTTP (404, 405, 415...) ou excecao nao
-# prevista sai como JSON generico. Nunca devolve stack trace, caminho de arquivo
-# ou texto da excecao ao cliente; o detalhe fica so no log do servidor (e, para
-# excecoes, so o TIPO, que nao carrega dado do usuario).
 @app.errorhandler(HTTPException)
 def erro_http(e):
-    if e.code in (413, 429):          # ja tem mensagem propria acima
+    if e.code in (413, 429):
         return e
     return jsonify({"erro": "Requisicao invalida" if (e.code or 500) < 500 else "Erro no servidor"}), e.code or 500
-
 
 @app.errorhandler(Exception)
 def erro_inesperado(e):
     logger.error("Excecao nao tratada: %s", type(e).__name__)
     return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
 
-
-# Funcao pra desligar o servidor certinho com Ctrl+C
 def graceful_shutdown(sig, frame):
     logger.info("Desligando o servidor...")
     sys.exit(0)
 
-
-# Os handlers de sinal só fazem sentido pro processo de desenvolvimento (servidor
-# standalone). Registrar signal.signal() no nivel do modulo rodaria toda vez que o
-# app fosse importado (ex.: por um servidor WSGI como o gunicorn), o que nao tem
-# efeito util ali e pode ate falhar (signal so funciona na main thread).
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, graceful_shutdown)
     signal.signal(signal.SIGTERM, graceful_shutdown)

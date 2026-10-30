@@ -1,22 +1,3 @@
-/* =====================================================================
-   ASTRA — Landing Page (grafite · branco · azul sereno)
-   Vanilla HTML/CSS/JS · Inter · Lucide icons
-
-   ESCALA FLUIDA:
-   - Tudo dimensionado com clamp(min-rem, rem + vw, max-rem) ou vmin.
-     · A parte em rem cresce com o ZOOM do navegador (Ctrl +/-).
-     · A parte em vw/vmin adapta entre mobile / tablet / desktop / 4K.
-   - Altura usa min-height + scroll (em vez de height fixa + overflow:hidden),
-     então NADA é cortado ao dar zoom ou em telas baixas.
-   ===================================================================== */
-
-/* =====================================================================
-   FONTE — Inter auto-hospedada (nenhuma requisição a terceiros)
-   Fonte variável: um único arquivo cobre os pesos 400–800, então não há
-   um woff2 por peso. Os dois subsets são divididos por unicode-range:
-   o navegador só baixa "latin-ext" se a página usar algum caractere dele.
-   Origem: Google Fonts (Inter v20, licença SIL Open Font License 1.1).
-   ===================================================================== */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -39,33 +20,16 @@
 }
 
 :root {
-  /* ── PALETA: grafite quente · branco · azul sereno ──
-     Tema escuro. A base NAO e preto puro: e um grafite quente (#262624 no
-     painel), que cansa menos em leitura longa e faz o azul parecer mais
-     suave do que sobre preto absoluto. O azul sereno e o unico matiz do sistema:
-     use-o so em acento (estado ativo, foco, acao primaria).
-     Os tokens de vidro continuam sendo branco com alpha — funcionam sobre
-     qualquer base escura, entao trocar a base nao reescreve regra nenhuma.
-     ATENCAO: os valores escuros existem em DOIS lugares (:root e o bloco
-     prefers-color-scheme:dark do tema "Sistema"). Mudar so um deixa "Escuro"
-     e "Sistema" com aparencias diferentes. */
 
-  /* base */
   --bg-deep: #191817;
 
-  /* tinta */
   --text: #faf9f5;
   --text-soft: #b0aca2;
 
-  /* acento: azul sereno */
-  /* O 'ouro' (nome antigo) e o AZUL SERENO (Pantone Serenity #92A8D1). Os tokens
-     seguem com o nome --gold: sao o SLOT de acento do sistema, e renomear
-     exigiria reescrever ~40 regras sem ganho nenhum. */
   --gold: #92a8d1;
   --gold-soft: #b4c4e2;
   --accent: var(--gold);
 
-  /* vidro escuro: branco com opacidade baixa sobre o preto */
   --glass: rgba(255, 255, 255, 0.055);
   --glass-strong: rgba(255, 255, 255, 0.09);
   --glass-hover: rgba(255, 255, 255, 0.13);
@@ -73,54 +37,34 @@
   --border-strong: rgba(255, 255, 255, 0.19);
   --border-gold: rgba(146, 168, 209, 0.40);
 
-  /* halos do acento (foco, brilho, sombra colorida) */
   --gold-15: rgba(146, 168, 209, 0.15);
   --gold-25: rgba(146, 168, 209, 0.25);
   --gold-40: rgba(146, 168, 209, 0.40);
 
-  /* no escuro a sombra precisa ser bem mais densa para existir */
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.45);
 
-  /* acao primaria: azul sereno com texto escuro (contraste alto) */
   --send-grad: linear-gradient(135deg, #a9bcdd 0%, #859ecb 100%);
-  /* cor do texto/icone QUE FICA EM CIMA do azul (nao muda com o tema:
-     o botao azul tem texto escuro nos dois) */
   --on-gold: #0e1626;
 
-  /* estados semanticos */
   --ok: #4ade80;
   --danger: #ff8a7a;
   --danger-grad: linear-gradient(135deg, #e05a4a, #b53225);
   --on-danger: #fff;
   --danger-soft: rgba(255, 138, 122, 0.14);
-  /* fundo da lista aberta do <select> (o SO desenha fora do nosso controle) */
   --select-pop: #2b2a27;
-  /* Faixa da janela anônima. Contrasta com o painel de propósito: é o que
-     faz parecer uma JANELA À PARTE, e não uma barra dentro do app. */
-  /* Um degrau acima do painel, nao o oposto dele: assim a faixa continua
-     lendo como chrome de janela SEM inverter o tema — e o fantasma fica
-     claro no tema escuro, visivel de verdade. */
   --anon-chrome: #eceae4;
   --anon-chrome-ink: #16150f;
-  /* Moldura em volta do painel. NAO e a cor da barra: no tema claro a
-     barra e preta, e usar ela aqui viraria uma borda grossa preta em
-     volta do painel branco. */
   --anon-frame: #eceae4;
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* ── escala fluida (responde a zoom + tamanho de tela) ── */
-
-  /* sidebar expandida (padrao) e recolhida (so icones) */
-  --sidebar-w: 248px;
-  --sidebar-gap: 0px;                /* menu encostado na borda, sem moldura flutuante */
-  /* espaco que a sidebar rouba do conteudo (usado no padding-left do .app) */
+  --sidebar-w: 288px;
+  --sidebar-gap: 0px;
   --sidebar-space: calc(var(--sidebar-w) + var(--sidebar-gap) * 2);
 
-  /* miolo escala pela MENOR dimensão (vmin) → proporcional à tela, não estoura em telas largas */
-  --h1: clamp(1.55rem, 1rem + 2.7vmin, 2.9rem);          /* cabe "Todo código tem um ponto cego." em 1 linha */
+  --h1: clamp(1.55rem, 1rem + 2.7vmin, 2.9rem);
 
   --prompt-w: min(41rem, 92vw);
   --fs-ctrl: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
@@ -130,14 +74,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  /* remove o destaque de toque branco/cinza que o WebKit mobile aplica
-     em cima de botões de vidro (backdrop-filter), escondendo ícone/texto */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* sem isso, o navegador desenha o widget nativo (branco/cinza) por cima do
-   background customizado quando o <button> fica :disabled (ex.: Send
-   enquanto a IA responde), escondendo o ícone e o texto */
 button {
   appearance: none;
   -webkit-appearance: none;
@@ -145,7 +84,6 @@ button {
 
 html {
   scroll-behavior: smooth;
-  /* font-size padrão (16px) preservado para que rem responda ao zoom */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -158,20 +96,15 @@ body {
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  background: var(--bg-deep);       /* fundo liso, sem gradientes nem ruido */
+  background: var(--bg-deep);
 }
 
-/* ── CONTAINER PRINCIPAL ──
-   Visual limpo: sem caixa de vidro, borda, sombra nem animacao de entrada; o
-   conteudo vive direto sobre o fundo liso da pagina. */
 .app {
   position: relative;
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  /* a sidebar e absolute (nao ocupa fluxo), entao e o padding do .app que
-     empurra o conteudo e mantem tudo centralizado no espaco QUE SOBRA. */
   transition: padding-left 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
   display: flex;
@@ -179,15 +112,10 @@ body {
   align-items: center;
 }
 
-/* desktop: abrir a sidebar empurra o conteudo em vez de cobri-lo */
 @media (min-width: 901px) {
   .app.is-sidebar-open { padding-left: var(--sidebar-space); }
 }
 
-/* ── SIDEBAR ──
-   Fechada por padrao: a home fica limpa e o unico elemento de chrome e o
-   quadradinho .sidebar-open no canto. Abrir empurra o conteudo no desktop
-   (padding-left do .app) e vira sobreposicao com veu no mobile. */
 .sidebar {
   position: absolute;
   left: var(--sidebar-gap);
@@ -202,13 +130,11 @@ body {
   border: 0;
   border-right: 1px solid var(--border);
   border-radius: 0;
-  /* estado fechado: fora da tela, sem ocupar nada */
   transform: translateX(calc(-100% - var(--sidebar-gap) - 8px));
   transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .app.is-sidebar-open .sidebar { transform: none; }
 
-/* quadradinho que abre — some quando a sidebar esta aberta */
 .sidebar-open {
   position: absolute;
   left: clamp(10px, 1.2vw, 18px);
@@ -230,7 +156,6 @@ body {
 .sidebar-open :is(i, svg) { width: 19px; height: 19px; }
 .app.is-sidebar-open .sidebar-open { opacity: 0; pointer-events: none; }
 
-/* ── cabecalho: marca + recolher ── */
 .sidebar__head {
   display: flex;
   align-items: center;
@@ -252,11 +177,6 @@ body {
   font-family: var(--font);
 }
 
-/* Marca em texto, no estilo da imagem de referência: caixa alta e bem
-   espaçada. A Inter que já hospedamos cobre esse desenho — nenhuma fonte
-   nova é necessária. O margin-right negativo compensa o espaço que o
-   letter-spacing acrescenta DEPOIS da última letra; sem ele a palavra
-   fica visualmente deslocada para a esquerda. */
 .sidebar__wordmark {
   font-size: 0.92rem;
   font-weight: 600;
@@ -283,7 +203,6 @@ body {
 .sidebar__collapse:hover { background: var(--glass-hover); color: var(--text); }
 .sidebar__collapse :is(i, svg) { width: 17px; height: 17px; }
 
-/* ── linhas: acao primaria e navegacao ── */
 .side-new {
   display: flex;
   align-items: center;
@@ -316,7 +235,6 @@ body {
   color: var(--text-soft);
 }
 
-/* ── lista de conversas ── */
 .sidebar__list {
   flex: 1 1 auto;
   min-height: 0;
@@ -330,7 +248,6 @@ body {
 .sidebar__list::-webkit-scrollbar { width: 6px; }
 .sidebar__list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 10px; }
 
-/* ── RODAPE: linha de "conta" + menu suspenso ── */
 .sidebar__foot {
   position: relative;
   margin-top: auto;
@@ -367,12 +284,10 @@ body {
   letter-spacing: 0.14em;
   font-size: 0.76rem;
 }
-/* o sufixo volta ao normal: so a marca leva o tratamento de caixa alta */
 .side-account__name .muted { font-weight: 500; text-transform: none; letter-spacing: 0; }
 .side-account__chev { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-soft); transition: transform 0.2s ease; }
 .side-account[aria-expanded="true"] .side-account__chev { transform: rotate(180deg); }
 
-/* o menu sobe a partir do rodape, como em apps de chat */
 .side-menu {
   position: absolute;
   left: 0;
@@ -429,8 +344,6 @@ body {
 
 .side-menu__sep { height: 1px; margin: 5px 4px; background: var(--border); }
 
-/* ── CONVERSA ANONIMA ──
-   Botao no canto oposto ao da sidebar. */
 .anon-btn {
   position: absolute;
   right: clamp(10px, 1.2vw, 18px);
@@ -449,24 +362,17 @@ body {
   transition: background 0.15s, border-color 0.15s;
 }
 .anon-btn:hover { background: var(--glass-hover); }
-/* icone do Lucide: herda currentColor, entao segue o tema sozinho —
-   */
 .anon-btn :is(i, svg) {
   width: 19px;
   height: 19px;
-  /* --text = BRANCO no tema escuro, quase preto no claro.
-     Sem opacity: qualquer transparência já tira o branco pleno; o retorno
-     visual do hover vem do fundo do botão, não de escurecer o ícone. */
   color: var(--text);
 }
-/* ligado: o icone acende e o botao ganha contorno azul */
 .anon-btn[aria-pressed="true"] {
   background: var(--gold-15);
   border-color: var(--border-gold);
 }
 .anon-btn[aria-pressed="true"] :is(i, svg) { color: var(--gold); }
 
-/* aviso sob a caixa de texto */
 .anon-note {
   max-width: min(92vw, 34rem);
   margin: var(--anon-note-gap, 10px) auto 0;
@@ -476,10 +382,6 @@ body {
   color: var(--text-soft);
 }
 
-/* ── A JANELA ANÔNIMA ──
-   Imita o chrome de uma janela separada: faixa clara no topo e, abaixo, o
-   painel escuro recuado com cantos arredondados. Sem molduras coloridas: o
-   contraste entre faixa e painel já comunica a troca de contexto. */
 .anon-bar {
   position: sticky;
   top: 0;
@@ -498,12 +400,6 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* a faixa some no corpo: sem padding em volta e com o mesmo fundo dela */
-/* As três variantes existem por ESPECIFICIDADE, não por capricho:
-   `:root[data-theme="light"] body` (0,2,1) pinta o fundo do tema claro e
-   aparece DEPOIS neste arquivo. Só `:root.is-anon body` empataria e perderia
-   por ordem — a moldura ficaria clara no tema claro. Qualificar pelo tema
-   sobe para (0,3,1) e vence sem precisar de !important. */
 :root.is-anon body,
 :root.is-anon[data-theme="light"] body,
 :root.is-anon[data-theme="system"] body {
@@ -511,7 +407,6 @@ body {
   background: var(--anon-frame);
 }
 :root.is-anon .app {
-  /* recuo pequeno em volta = o painel "flutua" dentro da janela */
   margin: 0 8px 8px;
   width: auto;
   max-width: none;
@@ -527,7 +422,6 @@ body {
   color: var(--anon-chrome-ink);
   animation: anonFloat 3.4s ease-in-out infinite;
 }
-/* O fantasma flutua de leve. Sem drop-shadow: o selo já o destaca. */
 @keyframes anonFloat {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50%      { transform: translateY(-2.5px) rotate(-4deg); }
@@ -558,13 +452,9 @@ body {
 .anon-bar__close:hover { opacity: 1; background: rgba(0, 0, 0, 0.08); }
 .anon-bar__close :is(i, svg) { width: 18px; height: 18px; }
 
-/* dentro da janela anônima não há sidebar nem o botão que a abre */
 .app.is-anon .sidebar,
 .app.is-anon .sidebar-open,
 .app.is-anon .anon-btn { display: none; }
-/* painel um pouco mais fechado que o normal, sem contorno colorido.
-   O !important vence o padding que .app.is-sidebar-open aplica com a mesma
-   especificidade — na janela anônima não existe sidebar para abrir espaço. */
 .app.is-anon {
   padding-left: 0 !important;
   background: linear-gradient(135deg, rgba(38, 37, 34, 0.97) 0%, rgba(28, 27, 25, 0.97) 100%);
@@ -572,25 +462,18 @@ body {
   box-shadow: none;
 }
 
-/* o botão só existe na tela inicial: não dá para tornar anônima uma conversa
-   que já começou — as mensagens anteriores já estão gravadas */
 .app.is-chatting .anon-btn { display: none; }
 
-/* A caixa de mensagem do modo anônimo é TRACEJADA (a marca do modo anônimo no
-   apps de chat). Os tokens existem para o tema claro poder trocar o estilo sem
-   duplicar regras: o padrão (escuro) continua com borda contínua. */
 :root { --anon-border-style: solid; }
 .app.is-anon .prompt__box { border-style: var(--anon-border-style); }
 
-/* No tema claro o painel é claro, então a faixa e a moldura ficam PRETAS, como no
-   apps de chat: o contraste com o painel branco diz que é uma janela à parte. */
 :root[data-theme="light"],
 :root[data-theme="system"] {
   --anon-chrome: #111111;
   --anon-chrome-ink: #ffffff;
   --anon-frame: #111111;
   --anon-border-style: dashed;
-  --anon-note-gap: 2.5rem;       /* aviso mais abaixo da caixa */
+  --anon-note-gap: 2.5rem;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
@@ -608,7 +491,6 @@ body {
   }
 }
 
-/* veu que fecha por clique fora (so no mobile; no desktop a sidebar convive) */
 .sidebar-veil {
   position: absolute;
   inset: 0;
@@ -619,19 +501,14 @@ body {
   animation: msgIn 0.2s ease;
 }
 
-/* ── HERO ── */
 .hero {
   position: relative;
   z-index: 10;
-  /* flex:0 0 auto + margin-top:auto (aqui) e margin-bottom:auto (no .prompt)
-     centram HERO e PROMPT como um GRUPO. Antes o hero era flex:1 e engolia
-     todo o espaco livre, empurrando a barra de envio para o rodape e abrindo
-     um vao grande entre o logo e ela. */
   flex: 0 0 auto;
   margin-top: auto;
   width: 100%;
   display: flex;
-  flex-direction: row;       /* logo AO LADO da frase, como em apps de chat */
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: clamp(0.7rem, 1.4vw, 1rem);
@@ -644,7 +521,6 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  /* saudacao em fonte com serifa, como a de apps de chat */
   font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
   font-size: clamp(1.9rem, 1.3rem + 2.2vmin, 2.7rem);
   line-height: 1.15;
@@ -655,18 +531,12 @@ body {
 
 .hl-line { white-space: nowrap; }
 
-/* em telas estreitas, deixa quebrar pra não estourar.
-   Limite subiu de 430px para 640px: a frase atual ("Todo código tem um ponto
-   cego.") é ~25% mais longa que a antiga em inglês. 640px alinha com o
-   breakpoint de MOBILE já usado abaixo e deixa folga confortável — em 560px
-   a linha passava a raspar na borda. */
 @media (max-width: 640px) {
   .hl-line { white-space: normal; }
 }
 
-/* ── 3D GLASS ORB ── */
 .orb-stage {
-  order: -1;                 /* logo ACIMA da frase, como em apps de chat */
+  order: -1;
   position: relative;
   perspective: 900px;
   display: flex;
@@ -683,13 +553,7 @@ body {
   50%      { transform: translateY(-3%); }
 }
 
-/* LOGO DA ASTRA
-   O PNG e uma estrela AZUL SERENO sobre fundo TRANSPARENTE (alfa 0). Como ja tem
-   canal alfa, nao precisa de mix-blend-mode, e o drop-shadow acompanha a
-   silhueta real da estrela (num PNG opaco ele contornaria o quadrado). */
 .orb-img {
-  /* O PNG tem so uma pequena margem transparente: a caixa CSS ja e
-     praticamente o tamanho visivel da estrela. */
   width: clamp(38px, 5vmin, 50px);
   max-width: 82vw;
   height: auto;
@@ -703,14 +567,10 @@ body {
   will-change: transform;
 }
 
-/* ── PROMPT AREA ── */
 .prompt {
   position: relative;
   z-index: 10;
   width: 100%;
-  /* espelha o gap do .hero (o outro lado do logo); bottom:auto, junto com o
-     margin-top:auto do .hero, mantém o par centralizado na página.
-     Logo, frase e caixa formam um grupo compacto no centro da tela. */
   margin: clamp(1.25rem, 3vh, 2rem) auto auto;
   display: flex;
   flex-direction: column;
@@ -801,10 +661,6 @@ body {
 }
 
 .ctrl-btn--send:hover {
-  /* precisa repetir o gradiente aqui: .ctrl-btn:hover (mesma especificidade,
-     porém genérico p/ todos os ctrl-btn) também define "background" e, sem
-     isso, apagava o gradiente do Send e deixava fundo quase-branco com
-     texto branco por cima — some o ícone/palavra ao passar o mouse/clicar */
   background: var(--send-grad);
   transform: scale(1.03);
   filter: brightness(1.08);
@@ -821,18 +677,10 @@ body {
   filter: none;
 }
 
-/* =====================================================================
-   BREAKPOINTS — refinos pontuais (a base já é fluida)
-   ===================================================================== */
-
-/* ── MOBILE ──
-   Abaixo de 900px nao cabe sidebar + conteudo lado a lado: ela sobrepoe (sem
-   empurrar) e o veu fecha por clique fora. */
 @media (max-width: 900px) {
   .sidebar { width: min(292px, 86vw); }
 }
 
-/* ── MOBILE ── */
 @media (max-width: 640px) {
   body { padding: 0; }
 
@@ -844,28 +692,20 @@ body {
 
   .hero { padding-top: clamp(4rem, 12vh, 5.5rem); }
 
-  /* empilha os controles em telas estreitas pra nada estourar */
   .prompt__controls { justify-content: center; }
   .prompt__controls-left,
   .prompt__controls-right { flex: 1 1 auto; justify-content: center; }
 }
 
-/* ── MOBILE PEQUENO ── */
 @media (max-width: 400px) {
   .ctrl-btn { padding: 0 10px; }
 }
 
-/* ── ALTURA BAIXA (zoom alto, paisagem, janelas curtas) ──
-   O logo encolhe porque em janela baixa ele é quem rouba espaço vertical.
-   Os valores subiram junto com a nova escala base (520px). */
 @media (max-height: 560px) {
-  /* janela muito baixa: volta a empilhar a partir do topo e desliga o
-     agrupamento centralizado, senão não cabe */
   .hero { justify-content: flex-start; margin-top: 0; }
   .prompt { margin-bottom: clamp(0.5rem, 1.5vh, 1rem); }
 }
 
-/* ── ACESSIBILIDADE ── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -876,26 +716,14 @@ body {
   }
 }
 
-/* =====================================================================
-   CHAT, HISTÓRICO, MODAL, TOAST, ANEXOS  (funcionalidade)
-   ===================================================================== */
-
-/* o atributo hidden precisa vencer os display:flex abaixo */
 [hidden] { display: none !important; }
 
-/* ── modo conversa: altura definida p/ rolagem interna ── */
 .app.is-chatting { height: 100vh; height: 100dvh; }
-/* No modo conversa o .chat ocupa o espaco livre, entao o margin-bottom:auto do
-   .prompt resolveria para 0 e a barra colaria na borda inferior. Aqui ela volta
-   a ter respiro explicito. */
-/* margin-top: respiro entre o fim da resposta e a caixa de mensagem (antes ficava
-   colada na última linha) */
 .app.is-chatting .prompt {
   margin-top: clamp(0.5rem, 1.2vh, 0.9rem);
   margin-bottom: clamp(0.9rem, 2.5vh, 1.6rem);
 }
 
-/* ── CHAT ── */
 .chat {
   position: relative;
   z-index: 10;
@@ -909,10 +737,6 @@ body {
   flex: 1;
   width: 100%;
   overflow-y: auto;
-  /* o recuo da sidebar agora vem do padding-left do .app, entao aqui o
-     padding volta a ser simetrico */
-  /* respiro grande embaixo, como em apps de chat: a última resposta termina bem acima da
-     caixa de mensagem em vez de colada nela */
   padding: clamp(24px, 4vh, 44px) clamp(16px, 3vw, 32px) clamp(96px, 18vh, 150px);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
@@ -929,9 +753,6 @@ body {
   gap: 28px;
 }
 
-/* ── MENSAGENS ──
-   Visual limpo, como em apps de chat: a resposta é texto direto na página (sem balão
-   nem avatar) e só a mensagem da pessoa fica num balão discreto. */
 .msg { display: flex; gap: 10px; animation: msgIn 0.25s ease; }
 
 @keyframes msgIn {
@@ -979,7 +800,6 @@ body {
 }
 .msg__files :is(i, svg) { width: 12px; height: 12px; }
 
-/* ── MARKDOWN ── */
 .markdown > :first-child { margin-top: 0; }
 .markdown p { margin: 0 0 14px; }
 .markdown p:last-child { margin-bottom: 0; }
@@ -1013,8 +833,6 @@ body {
   border-radius: 6px;
 }
 
-/* BLOCO DE CÓDIGO: cabeçalho com a linguagem e o botão "Copiar" (montado por
-   decorarBlocoDeCodigo() no script.js). Escuro nos dois temas, como em apps de chat. */
 .codeblock {
   margin: 4px 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.10);
@@ -1050,8 +868,6 @@ body {
   overflow-x: auto;
   background: #1c1b19;
   color: #f2efe8;
-  /* tamanho e altura de linha no <pre> (e não no <code>): é o <pre> que define a
-     altura da linha; no <code> as linhas ficavam com o dobro do espaço */
   font-size: 0.85rem;
   line-height: 1.6;
 }
@@ -1064,7 +880,6 @@ body {
 }
 .clipboard-fallback { position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; }
 
-/* TABELA ("grade"): só linhas horizontais finas, sem caixa em cada célula */
 .markdown table {
   border-collapse: collapse;
   width: 100%;
@@ -1081,7 +896,6 @@ body {
 .markdown th { font-weight: 600; border-bottom-color: var(--border-strong); }
 .markdown tr:last-child td { border-bottom: 0; }
 
-/* ── DOTS (pensando) ── */
 .dots span {
   display: inline-block;
   font-size: 1.4rem;
@@ -1093,7 +907,6 @@ body {
 .dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes dotFlash { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
 
-/* ── ANEXOS no input ── */
 .attach-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .attach-tags:not(:empty) { margin-bottom: 8px; }
 .attach-tag {
@@ -1117,7 +930,6 @@ body {
   padding: 0;
 }
 
-/* ── ITENS DE CONVERSA (dentro da sidebar) ── */
 .history-empty { padding: 8px 12px; }
 
 .history-item {
@@ -1139,7 +951,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* pino da conversa fixada */
 .history-item__pin {
   flex-shrink: 0;
   width: 12px;
@@ -1147,7 +958,6 @@ body {
   color: var(--gold);
 }
 
-/* botão "⋮" */
 .history-item__more {
   display: flex;
   flex-shrink: 0;
@@ -1157,14 +967,13 @@ body {
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
-  opacity: 0.5;                 /* sempre visível (inclusive no toque/celular) */
+  opacity: 0.5;
   transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
 .history-item:hover .history-item__more { opacity: 1; }
 .history-item__more:hover { color: var(--text); background: var(--glass-hover); }
 .history-item__more :is(i, svg) { width: 14px; height: 14px; }
 
-/* campo de renomear, no lugar do título */
 .history-item__input {
   flex: 1;
   min-width: 0;
@@ -1179,9 +988,6 @@ body {
   outline: none;
 }
 
-/* ── MENU "⋮" DAS CONVERSAS ──
-   position:fixed porque a lista tem overflow: dentro dela o menu seria
-   cortado. O JS calcula top/left a partir do botão. */
 .chat-menu {
   position: fixed;
   z-index: 60;
@@ -1234,7 +1040,6 @@ body {
 }
 .chat-menu__sep { height: 1px; margin: 5px 4px; background: var(--border); }
 
-/* ── ICON BTN genérico ── */
 .icon-btn {
   display: flex;
   align-items: center;
@@ -1251,7 +1056,6 @@ body {
 .icon-btn:hover { background: var(--glass-hover); color: var(--text); }
 .icon-btn :is(i, svg) { width: 16px; height: 16px; }
 
-/* ── MODAL ── */
 .modal {
   position: fixed;
   inset: 0;
@@ -1281,7 +1085,6 @@ body {
 
 .modal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .modal__head h2 { font-size: 1.2rem; font-weight: 700; }
-/* rola por dentro em vez de estourar a tela quando o modal cresce */
 .modal__body {
   display: flex;
   flex-direction: column;
@@ -1313,7 +1116,6 @@ body {
 }
 .settings__group:first-child { margin-top: 0; }
 
-/* ── segmentado (Aparência, Movimento) ── */
 .segmented {
   display: inline-flex;
   flex-shrink: 0;
@@ -1344,8 +1146,6 @@ body {
 .segmented button:hover { color: var(--text); }
 .segmented button.is-active { background: var(--glass-hover); color: var(--text); }
 
-
-/* select do tema escuro: sem isso o Windows desenha o combo nativo branco */
 .select {
   flex-shrink: 0;
   max-width: 55%;
@@ -1360,7 +1160,6 @@ body {
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  /* seta desenhada em SVG inline (data:) — o CSP libera img-src data: */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23918b80' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
@@ -1369,7 +1168,6 @@ body {
 .select:hover:not(:disabled) { border-color: var(--border-gold); }
 .select:focus-visible { outline: 2px solid var(--border-gold); outline-offset: 2px; }
 .select:disabled { opacity: 0.55; cursor: not-allowed; }
-/* a lista aberta é desenhada pelo SO: força fundo escuro nas opções */
 .select option { background: var(--select-pop); color: var(--text); }
 .muted { color: var(--text-soft); font-size: 0.8rem; margin-top: 2px; }
 
@@ -1397,7 +1195,6 @@ body {
 .btn--ghost { background: var(--glass); color: var(--text); border: 1px solid var(--border); }
 .btn--ghost:hover { background: var(--glass-hover); }
 
-/* ── TOAST ── */
 .toast {
   position: fixed;
   z-index: 1200;
@@ -1418,22 +1215,11 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ── ajustes mobile p/ chat ── */
 @media (max-width: 640px) {
   .app.is-chatting { height: 100dvh; }
   .chat__scroll { padding-top: 66px; }
 }
 
-
-/* =====================================================================
-   TEMA CLARO
-   O escuro e a base (:root). Aqui so os TOKENS mudam — nenhuma regra de
-   layout e reescrita. Duas portas de entrada:
-     [data-theme="light"]                        -> escolha explicita
-     prefers-color-scheme + :not([data-theme])   -> opcao "Sistema"
-   O padrao de primeira visita e ESCURO (o JS grava data-theme="dark"),
-   para a identidade grafite/branco/azul ser o que se ve de cara.
-   ===================================================================== */
 :root[data-theme="light"],
 :root[data-theme="system"] {
   --bg-deep: #faf9f5;
@@ -1441,14 +1227,10 @@ body {
   --text: #1c1c1a;
   --text-soft: #6e6e66;
 
-  /* Acento do tema claro: azul sereno. O botao primario usa o mesmo degrade do
-     escuro, com texto escuro por cima (um branco sobre azul claro nao tem contraste). */
-  --gold: #4f6aa0;            /* azul sereno mais fundo: texto e icones de acento legiveis sobre branco */
+  --gold: #4f6aa0;
   --gold-soft: #6f88b8;
   --on-gold: #0e1626;
 
-  /* "vidro" invertido: preto NEUTRO de baixa opacidade sobre o branco
-     (antes era quente, o que puxava o claro para o bege) */
   --glass: rgba(0, 0, 0, 0.035);
   --glass-strong: rgba(0, 0, 0, 0.06);
   --glass-hover: rgba(0, 0, 0, 0.075);
@@ -1473,7 +1255,6 @@ body {
   --danger-soft: rgba(179, 38, 30, 0.10);
 }
 
-/* "Sistema": segue o SO, mas so quando o usuario nao forcou um tema */
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     --bg-deep: #191817;
@@ -1499,7 +1280,6 @@ body {
   }
 }
 
-/* peças que nao sao token e precisam trocar junto */
 :root[data-theme="light"] .sidebar,
 :root[data-theme="system"] .sidebar { background: #f4f3f0; }
 :root[data-theme="light"] .side-menu,
@@ -1517,16 +1297,10 @@ body {
   :root[data-theme="system"] .modal { background: rgba(12, 11, 10, 0.66); }
 }
 
-/* A estrela do PNG e AZUL SERENO: sobre fundo claro ele ficaria fraco, entao
-   brightness() o escurece um pouco (mantendo o alfa) para ganhar contraste. */
 :root[data-theme="light"] .orb-img,
 :root[data-theme="system"] .orb-img {
   filter: brightness(0.8) saturate(1.15);
 }
-/* Sobre o painel branco a borda padrao quase some. Estes dois sao as unicas
-   superficies que o usuario le como CARD (o campo de pergunta e os atalhos
-   abaixo dele), entao ganham um contorno um degrau mais escuro para terem
-   forma propria — sem pesar o resto da interface. */
 :root[data-theme="light"] .prompt__box,
 :root[data-theme="system"] .prompt__box { border-color: rgba(0, 0, 0, 0.22); }
 @media (prefers-color-scheme: dark) {
@@ -1537,9 +1311,6 @@ body {
   :root[data-theme="system"] .orb-img { filter: none; }
 }
 
-/* =====================================================================
-   MOVIMENTO REDUZIDO — escolha explicita (o @media do SO continua valendo)
-   ===================================================================== */
 :root[data-motion="reduced"] *,
 :root[data-motion="reduced"] *::before,
 :root[data-motion="reduced"] *::after {
@@ -1549,22 +1320,13 @@ body {
   scroll-behavior: auto !important;
 }
 
-/* =====================================================================
-   FONTE DO CHAT — trocada por token, so nas mensagens e no campo de texto
-   ===================================================================== */
 :root { --font-chat: var(--font); }
-/* Georgia e Verdana ja vem instaladas em Windows, macOS e Android, entao nao
-   ha download nem requisicao externa — o CSP (font-src 'self') segue intacto.
-   Os fallbacks cobrem o caso raro de nao existirem. */
 :root[data-font="georgia"] { --font-chat: Georgia, 'Times New Roman', Times, serif; }
 :root[data-font="verdana"] { --font-chat: Verdana, Geneva, Tahoma, sans-serif; }
 :root[data-font="mono"] { --font-chat: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; }
 .msg__bubble,
 .prompt__box textarea { font-family: var(--font-chat); }
 
-/* ── FEEDBACK DE CLIQUE (:active) ──
-   Sem isso, ao remover o tap-highlight branco do WebKit os botões ficavam
-   sem nenhuma resposta visual ao toque/clique. */
 .sidebar-open:active,
 .side-account:active,
 .side-menu__item:active,
@@ -1575,4 +1337,174 @@ body {
 .sidebar__collapse:active,
 .side-new:active {
   transform: scale(0.96);
+}
+
+.uso-bloco { padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--glass); }
+.uso-linha { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.uso-linha span { font-variant-numeric: tabular-nums; font-weight: 600; }
+.uso-barra { height: 6px; border-radius: 3px; background: var(--glass-strong); overflow: hidden; margin-bottom: 10px; }
+.uso-barra i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--send-grad); transition: width 0.4s ease; }
+.uso-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.uso-grade > div { padding: 14px; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; gap: 2px; }
+.uso-num { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.modal__card--idioma { width: min(760px, 100%) !important; padding: 22px 22px 16px; }
+.modal__card--idioma .modal__body { max-height: none; overflow: visible; padding-right: 0; gap: 12px; }
+.idioma-busca {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  border: 1px solid var(--border); border-radius: 12px; background: transparent;
+  transition: border-color 0.15s;
+}
+.idioma-busca:focus-within { border-color: var(--border-gold); }
+.idioma-busca :is(i, svg) { width: 16px; height: 16px; color: var(--text-soft); flex-shrink: 0; }
+.idioma-busca input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 0.95rem; }
+.idioma-busca input::-webkit-search-cancel-button { display: none; }
+.idioma-grade {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 6px; align-content: start;
+  height: min(52vh, 420px); overflow-y: auto; padding: 4px 6px 4px 0;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+}
+.idioma-grade::-webkit-scrollbar { width: 6px; }
+.idioma-grade::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; }
+.idioma-grade::-webkit-scrollbar-track { background: transparent; }
+.idioma-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 9px 12px;
+  border: 0; border-radius: 10px; background: none; color: var(--text);
+  font: inherit; text-align: left; cursor: pointer; transition: background 0.12s;
+}
+.idioma-item:hover { background: var(--glass-hover); }
+.idioma-item strong { font-weight: 500; font-size: 0.95rem; line-height: 1.35; }
+.idioma-item span { font-size: 0.82rem; color: var(--text-soft); line-height: 1.35; }
+.idioma-item.is-ativo { background: var(--gold-15); }
+.idioma-item.is-ativo strong { color: var(--gold); }
+.idioma-vazio { grid-column: 1 / -1; padding: 12px; color: var(--text-soft); }
+.modal__card--idioma .modal__body > .muted { font-size: 0.8rem; }
+@media (max-width: 640px) { .idioma-grade { grid-template-columns: 1fr 1fr; } }
+
+.prompt__box {
+  border-radius: 20px;
+  padding: 14px 14px 10px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+.prompt__box textarea { min-height: 52px; padding: 2px 2px 6px; }
+.prompt__controls { margin-top: 2px; }
+.ctrl-btn--icone,
+.ctrl-btn--send {
+  width: 32px; height: 32px; padding: 0;
+  justify-content: center;
+  border-radius: 8px;
+}
+.ctrl-btn--icone { background: transparent; border: none; color: var(--text-soft); }
+.ctrl-btn--icone:hover { background: var(--glass-hover); color: var(--text); transform: none; }
+.ctrl-btn--icone :is(i, svg) { width: 20px; height: 20px; }
+.ctrl-btn--send :is(i, svg) { width: 18px; height: 18px; stroke-width: 2.4; }
+.ctrl-btn--send:hover { transform: none; }
+
+.sidebar-open :is(i, svg),
+.anon-btn :is(i, svg) { width: 18px; height: 18px; stroke-width: 1.75; color: var(--text-soft); }
+.sidebar-open:hover :is(i, svg),
+.anon-btn:hover :is(i, svg) { color: var(--text); }
+
+.prompt__controls-right { gap: 6px; }
+.ctrl-btn--icone[hidden] { display: none; }
+#micBtn.is-ouvindo { color: var(--gold); background: var(--gold-15); animation: mic-pulso 1.4s ease-in-out infinite; }
+@keyframes mic-pulso { 50% { box-shadow: 0 0 0 5px var(--gold-15); } }
+@media (prefers-reduced-motion: reduce) { #micBtn.is-ouvindo { animation: none; } }
+
+@media (min-width: 641px) {
+  .hero { gap: 12px; padding-top: 0; }
+  .hero__headline { font-size: 2.125rem; letter-spacing: -0.02em; line-height: 1.2; }
+  .orb-img { width: 34px; }
+  .prompt { margin-top: 22px; }
+  .prompt__box {
+    width: min(41.125rem, 92vw);
+    border-radius: 16px;
+    padding: 14px 12px 10px 16px;
+    border-width: 1px;
+  }
+  .prompt__box textarea { min-height: 44px; font-size: 16px; line-height: 1.5; padding: 0; }
+  .prompt__controls { margin-top: 4px; }
+  .ctrl-btn--icone, .ctrl-btn--send { width: 30px; height: 30px; border-radius: 8px; }
+  .ctrl-btn--icone :is(i, svg) { width: 18px; height: 18px; color: var(--text); }
+  .ctrl-btn--send :is(i, svg) { width: 16px; height: 16px; }
+}
+@media (min-width: 641px) {
+  .sidebar-open { left: 8px; top: 8px; }
+  .anon-btn { right: 8px; top: 8px; }
+}
+
+.sidebar { padding: 10px 8px 8px; }
+.sidebar__head { padding: 0 0 8px 6px; }
+.sidebar__wordmark {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
+  font-size: 1.5rem; font-weight: 400; text-transform: none;
+  letter-spacing: -0.01em; margin-right: 0;
+}
+.sidebar__collapse { width: 32px; height: 32px; border-radius: 8px; }
+.sidebar__collapse :is(i, svg) { width: 18px; height: 18px; }
+.side-new {
+  height: 36px; padding: 0 10px; gap: 10px; margin-bottom: 4px;
+  border-radius: 8px;
+  background: var(--glass-hover); color: var(--text);
+  font-size: 15px; font-weight: 500;
+}
+.side-new:hover { filter: none; background: var(--glass-strong); }
+.side-new :is(i, svg) { width: 18px; height: 18px; }
+.sidebar__section {
+  margin: 18px 10px 6px;
+  font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none;
+}
+.history-item { padding: 6px 10px; border-radius: 8px; min-height: 34px; }
+.history-item__title { font-size: 14px; }
+.sidebar__foot { border-top: 0; padding-top: 6px; }
+.side-account { height: 44px; padding: 0 8px; gap: 10px; border-radius: 8px; font-size: 14px; }
+.side-account__avatar {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--glass-strong); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+.side-account__name { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 500; }
+.side-account__name .muted { color: var(--text-soft); }
+.side-account__chev { width: 14px; height: 14px; }
+.side-account[aria-expanded="true"] .side-account__chev { transform: rotate(180deg); }
+
+:root[data-theme="light"] .sidebar { background: #faf9f5; border-right-color: rgba(28, 28, 26, 0.1); }
+:root[data-theme="light"] .prompt__box { background: #faf9f5; border-color: rgba(28, 28, 26, 0.3); box-shadow: 0 4px 20px rgba(28, 28, 26, 0.04); }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] .sidebar { background: #faf9f5; border-right-color: rgba(28, 28, 26, 0.1); }
+  :root[data-theme="system"] .prompt__box { background: #faf9f5; border-color: rgba(28, 28, 26, 0.3); box-shadow: 0 4px 20px rgba(28, 28, 26, 0.04); }
+}
+:root[data-theme="light"] .prompt__box:focus-within { border-color: rgba(28, 28, 26, 0.45); }
+@media (prefers-color-scheme: light) { :root[data-theme="system"] .prompt__box:focus-within { border-color: rgba(28, 28, 26, 0.45); } }
+
+.modal__card--confirm { width: min(420px, 100%) !important; padding: 18px 18px 16px !important; border-radius: 14px !important; }
+.modal__card--confirm h2 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+.modal__card--confirm p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-soft); }
+.modal__card--confirm .modal__footer { margin-top: 18px; gap: 8px; }
+.modal__card--confirm .btn { height: 32px; padding: 0 12px; border-radius: 8px; font-size: 14px; font-weight: 500; transform: none; }
+.btn--cinza { background: var(--glass-strong); color: var(--text); border: 1px solid transparent; }
+.btn--cinza:hover { background: var(--glass-hover); }
+.btn--perigo { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); }
+.btn--perigo:hover { background: var(--danger); color: #fff; }
+
+:root[data-theme="light"] {
+  --select-pop: #faf9f5;
+}
+:root[data-theme="light"] body,
+:root[data-theme="light"] .app,
+:root[data-theme="light"] .app.is-anon,
+:root[data-theme="light"] .sidebar { background: #faf9f5; }
+:root[data-theme="light"] .side-menu,
+:root[data-theme="light"] .chat-menu,
+:root[data-theme="light"] .modal__card { background: #faf9f5; border: 1px solid rgba(28, 28, 26, 0.12); }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] { --select-pop: #faf9f5; }
+  :root[data-theme="system"] body,
+  :root[data-theme="system"] .app,
+  :root[data-theme="system"] .app.is-anon,
+  :root[data-theme="system"] .sidebar { background: #faf9f5; }
+  :root[data-theme="system"] .side-menu,
+  :root[data-theme="system"] .chat-menu,
+  :root[data-theme="system"] .modal__card { background: #faf9f5; border: 1px solid rgba(28, 28, 26, 0.12); }
 }

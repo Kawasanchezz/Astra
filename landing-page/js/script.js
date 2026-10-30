@@ -1,30 +1,16 @@
-/* =====================================================================
-   ASTRA — app logic
-   - Chat conectado ao backend Python (Flask /chat)
-   - Logo com inclinação 3D seguindo o mouse
-   - Sidebar: nova conversa, início, lista de conversas, menu do rodapé
-   - Conversas em localStorage (fixar, renomear, apagar)
-   - Preferências: tema, fonte do chat, movimento, modelo da IA
-   ===================================================================== */
-
 const $ = (sel) => document.querySelector(sel);
 
-/* localStorage sempre por aqui: em modo privado/anonimo o acesso LANCA, e uma
-   excecao solta aqui derrubava o resto da funcao (era o caso do "Apagar
-   historico", que abortava antes de limpar a tela). */
 function lsGet(chave, padrao = null) {
   try { return localStorage.getItem(chave) ?? padrao; } catch { return padrao; }
 }
 function lsSet(chave, valor) {
   try { valor === null ? localStorage.removeItem(chave) : localStorage.setItem(chave, valor); }
-  catch { /* modo privado */ }
+  catch {  }
 }
 
-/* renderiza ícones Lucide (inclusive os criados dinamicamente) */
 function icons() { if (window.lucide) lucide.createIcons(); }
 icons();
 
-/* ── ELEMENTOS ── */
 const els = {
   app: $('.app'),
   hero: $('#hero'),
@@ -40,40 +26,29 @@ const els = {
   veil: $('#sidebarVeil'),
   historyList: $('#historyList'),
   toast: $('#toast'),
-  statusDot: $('#statusDot'),
-  serverStatus: $('#serverStatus'),
 };
 
-/* ── ESTADO ── */
 const STORE_KEY = 'credix_landing_chats';
 const MODEL_KEY = 'horus_model';
-// '' = deixa o servidor decidir (GROQ_MODEL). O backend valida contra a
-// allowlist e cai no padrão se vier algo fora dela, então isso é só preferência.
 let modeloEscolhido = lsGet(MODEL_KEY, '');
-let history = [];                 // [{role, content}] da conversa atual
+let history = [];
 let chatId = Date.now().toString();
 let chats = loadChats();
-let attachments = [];            // [{name, content}]
+let attachments = [];
 let sending = false;
-// Modo anônimo: NÃO é persistido de propósito. Se ficasse salvo, você poderia
-// voltar ao site sem perceber que ainda está nele e perder conversas.
 let anonimo = false;
 const isServed = location.protocol.startsWith('http');
-const MAX_PAYLOAD = 7500;        // alinhado ao MAX_INPUT_LENGTH (8000) do backend
-// Espelha o MAX_HISTORY_CHARS do servidor (12000), com folga. O servidor corta
-// o histórico que USA, mas o corpo da requisição é barrado ANTES disso pelo
-// limite de 32KB — então enviar a conversa inteira quebrava o chat por volta
-// do 12º turno com "Requisição muito grande". Aparar aqui resolve na origem
-// e ainda economiza banda. O servidor continua validando por conta própria.
+const AVISOS = {
+  pt: { falha: 'Não consegui responder agora. Tente de novo em alguns segundos.' },
+  en: { falha: "I couldn't reply right now. Please try again in a few seconds." },
+  es: { falha: 'No pude responder ahora. Inténtalo de nuevo en unos segundos.' },
+};
+const aviso = () => AVISOS[(lsGet('astra_idioma', 'pt') || 'pt').slice(0, 2)] || AVISOS.pt;
+const MAX_PAYLOAD = 7500;
 const MAX_HISTORY_PAYLOAD = 10000;
-// Anexos. O arquivo e lido inteiro na memoria e depois entra no MAX_PAYLOAD
-// acima; os dois limites existem pra ele nunca chegar cortado ao servidor.
 const MAX_FILE_BYTES = 200 * 1024;
 const MAX_FILE_CHARS = 7000;
 
-/* =====================================================================
-   ORB — inclinação 3D seguindo o mouse
-   ===================================================================== */
 const orb = $('#orb');
 const MAX_TILT = 8;
 let tX = 0, tY = 0, cX = 0, cY = 0;
@@ -96,9 +71,6 @@ if (orb && !reduceMotion) {
   animateOrb();
 }
 
-/* =====================================================================
-   UTILIDADES
-   ===================================================================== */
 function toast(msg, ms = 2600) {
   els.toast.textContent = msg;
   els.toast.hidden = false;
@@ -110,7 +82,6 @@ function toast(msg, ms = 2600) {
   }, ms);
 }
 
-/* modal de confirmação (vidro) — substitui o confirm() nativo */
 let _confirmCb = null;
 function confirmModal(title, msg, onOk) {
   $('#confirmTitle').textContent = title;
@@ -118,6 +89,7 @@ function confirmModal(title, msg, onOk) {
   _confirmCb = onOk;
   $('#confirmModal').hidden = false;
   icons();
+  setTimeout(() => $('#confirmCancel').focus(), 30);
 }
 function closeConfirm() { $('#confirmModal').hidden = true; _confirmCb = null; }
 
@@ -127,8 +99,6 @@ function escapeHtml(s) {
   ));
 }
 
-/* Links vindos da resposta da IA: abrem em outra aba SEM dar acesso a esta
-   (noopener) nem vazar a origem (noreferrer) — evita "tabnabbing". */
 if (typeof DOMPurify !== 'undefined') {
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A' && node.hasAttribute('href')) {
@@ -142,7 +112,6 @@ function renderMarkdown(text) {
   if (typeof marked === 'undefined') return escapeHtml(text);
   try {
     const html = marked.parse(text);
-    // Sem DOMPurify: NUNCA renderiza HTML cru (evita XSS) — cai pra texto escapado
     return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html) : escapeHtml(text);
   } catch { return escapeHtml(text); }
 }
@@ -156,9 +125,6 @@ function autoGrow() {
   els.input.style.height = Math.min(els.input.scrollHeight, 160) + 'px';
 }
 
-/* =====================================================================
-   MODO CHAT / HOME
-   ===================================================================== */
 function enterChatMode() {
   if (!els.chat.hidden) return;
   els.hero.hidden = true;
@@ -171,23 +137,12 @@ function goHome() {
   els.app.classList.remove('is-chatting');
 }
 
-/* logo / Início → volta pra home, salvando a conversa atual (dá pra retomar pela
-   lista da sidebar). renderHistoryList() porque a lista agora está sempre
-   visível: se a conversa acabou de ser salva, ela precisa aparecer na hora. */
-function goHomeView() {
-  saveCurrent();
-  renderHistoryList();
-  goHome();
-}
-
-/* Zera a conversa em andamento e volta pra home. NAO salva nada: quem chama
-   decide se o que estava na tela deve ser preservado antes. */
 function resetConversa() {
   history = [];
   chatId = Date.now().toString();
   els.messages.innerHTML = '';
   clearAttachments();
-  renderHistoryList();   // a conversa recém-salva já aparece na sidebar
+  renderHistoryList();
   goHome();
 }
 
@@ -197,12 +152,6 @@ function newChat() {
   els.input.focus();
 }
 
-/* =====================================================================
-   RENDER DE MENSAGENS
-   ===================================================================== */
-/* Toda mensagem entra por aqui. O icons() e obrigatorio: o Lucide TROCA cada
-   <i data-lucide> por um <svg>, entao elemento recem-criado nao vira icone
-   sozinho. */
 function appendMsg(classe, html, id) {
   const row = document.createElement('div');
   row.className = classe;
@@ -215,27 +164,22 @@ function appendMsg(classe, html, id) {
   return row;
 }
 
-/* Copia para a área de transferência. clipboard.writeText exige página segura
-   (https ou localhost); fora disso cai no execCommand antigo. */
 async function copiarTexto(texto) {
   try {
     await navigator.clipboard.writeText(texto);
     return true;
-  } catch { /* sem permissão ou contexto inseguro: tenta o método antigo */ }
+  } catch {  }
   const area = document.createElement('textarea');
   area.value = texto;
   area.className = 'clipboard-fallback';
   document.body.appendChild(area);
   area.select();
   let ok = false;
-  try { ok = document.execCommand('copy'); } catch { /* sem suporte */ }
+  try { ok = document.execCommand('copy'); } catch {  }
   area.remove();
   return ok;
 }
 
-/* Bloco de código no estilo de apps de chat: cabeçalho com a linguagem e botão
-   "Copiar" que copia só o código (sem o cabeçalho). Só mexe no DOM e usa
-   textContent, então nada do que a IA escreveu vira HTML aqui. */
 function decorarBlocoDeCodigo(pre) {
   const code = pre.querySelector('code');
   const linguagem = (code?.className.match(/language-([\w+#.-]+)/) || [])[1] || 'código';
@@ -283,9 +227,6 @@ function showThinking() {
 }
 function hideThinking() { const t = $('#thinking'); if (t) t.remove(); }
 
-/* Devolve só o final do histórico que cabe no orçamento do servidor.
-   Percorre do mais RECENTE para o mais antigo: o contexto que se perde é o
-   mais velho, que é o menos útil para a próxima resposta. */
 function historicoParaEnvio() {
   const recorte = [];
   let orcamento = MAX_HISTORY_PAYLOAD;
@@ -298,9 +239,6 @@ function historicoParaEnvio() {
   return recorte.reverse();
 }
 
-/* Junta texto + anexos numa unica mensagem e corta no limite do backend,
-   para o servidor nunca devolver "Texto muito longo" por algo que daria
-   para prever aqui. */
 function montarPayload(text, arquivos) {
   let payload = text;
   if (arquivos.length) {
@@ -309,15 +247,11 @@ function montarPayload(text, arquivos) {
       .join('\n\n');
   }
 
-  // respeita o limite do backend (evita "Texto muito longo")
   if (payload.length > MAX_PAYLOAD) payload = payload.slice(0, MAX_PAYLOAD) + '\n…(conteúdo truncado)';
 
   return payload;
 }
 
-/* Aplica a resposta do servidor na tela e no historico. Fica fora do send()
-   porque sao duas responsabilidades: uma cuida do FLUXO (estado do botao,
-   indicador de digitando, erro de rede) e esta cuida do RESULTADO. */
 function tratarResposta(data, textoEnviado) {
   if (data.erro) {
     addBotMsg(`Erro: ${data.erro}`, true);
@@ -327,12 +261,9 @@ function tratarResposta(data, textoEnviado) {
   history.push({ role: 'user', content: textoEnviado || '(arquivo anexado)' });
   history.push({ role: 'assistant', content: data.resposta });
   saveCurrent();
-  renderHistoryList();   // lista sempre visível: a conversa nova entra na hora
+  renderHistoryList();
 }
 
-/* =====================================================================
-   ENVIO → BACKEND PYTHON
-   ===================================================================== */
 async function send(presetText) {
   if (sending) return;
   const text = (presetText ?? els.input.value).trim();
@@ -342,6 +273,7 @@ async function send(presetText) {
 
   const sentFiles = [...attachments];
   addUserMsg(text || '(arquivo anexado)', sentFiles);
+  contarUso();
 
   const payload = montarPayload(text, sentFiles);
 
@@ -365,11 +297,11 @@ async function send(presetText) {
     const res = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // 'modelo' só vai quando o usuário escolheu um; senão o servidor usa o dele
       body: JSON.stringify({
         mensagem: payload,
         historico: prevHistory,
-        ...(modeloEscolhido ? { modelo: modeloEscolhido } : {})
+        ...(modeloEscolhido ? { modelo: modeloEscolhido } : {}),
+        idioma: idiomaEscolhido
       })
     });
     const data = await res.json();
@@ -377,7 +309,7 @@ async function send(presetText) {
     tratarResposta(data, text);
   } catch (e) {
     hideThinking();
-    addBotMsg('Não consegui falar com o servidor. Confira se o Python está rodando em `http://127.0.0.1:5000`.', true);
+    addBotMsg(aviso().falha, true);
   } finally {
     sending = false;
     els.send.disabled = false;
@@ -385,21 +317,14 @@ async function send(presetText) {
   }
 }
 
-/* =====================================================================
-   HISTÓRICO (localStorage)
-   ===================================================================== */
 function loadChats() {
   try { return JSON.parse(lsGet(STORE_KEY)) || {}; }
-  catch { return {}; }   // JSON corrompido no storage
+  catch { return {}; }
 }
 function saveCurrent() {
-  // Trava única do modo anônimo. saveCurrent() é o ÚNICO caminho que grava uma
-  // conversa, então barrar aqui garante que nada escape — em vez de espalhar
-  // checagens por cada chamador.
   if (anonimo) return;
   if (history.length === 0) return;
   const title = chats[chatId]?.title || (history[0].content.slice(0, 32) + (history[0].content.length > 32 ? '…' : ''));
-  // preserva o "fixado" ao regravar uma conversa existente
   const pinned = chats[chatId]?.pinned || false;
   chats[chatId] = { id: chatId, title, messages: [...history], ts: Date.now(), pinned };
   salvarChats();
@@ -409,7 +334,6 @@ function salvarChats() {
 }
 
 function renderHistoryList() {
-  // fixadas primeiro; dentro de cada grupo, mais recentes no topo
   const ids = Object.keys(chats).sort((a, b) => {
     const pa = chats[a].pinned ? 1 : 0, pb = chats[b].pinned ? 1 : 0;
     if (pa !== pb) return pb - pa;
@@ -432,8 +356,6 @@ function renderHistoryList() {
       <button class="history-item__more" title="Mais ações" aria-label="Mais ações" aria-haspopup="menu">
         <i data-lucide="more-vertical"></i>
       </button>`;
-    // ?. porque o markup acima pode mudar: sem isso, um typo numa classe
-    // viraria TypeError e a lista inteira pararia de responder
     item.querySelector('.history-item__title')?.addEventListener('click', () => loadChat(id));
     item.querySelector('.history-item__more')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -444,9 +366,6 @@ function renderHistoryList() {
   icons();
 }
 
-/* =====================================================================
-   MENU "⋮" DE CADA CONVERSA
-   ===================================================================== */
 let menuChatId = null;
 
 function abrirMenuChat(id, botao) {
@@ -457,7 +376,6 @@ function abrirMenuChat(id, botao) {
   menu.hidden = false;
   icons();
 
-  // position:fixed + medida real do menu para não vazar da janela
   const r = botao.getBoundingClientRect();
   const m = menu.getBoundingClientRect();
   let top = r.bottom + 6;
@@ -481,8 +399,6 @@ function fixarChat(id) {
   toast(chats[id].pinned ? 'Conversa fixada.' : 'Conversa desafixada.', 1400);
 }
 
-/* Renomear acontece no próprio item: troca o título por um input.
-   Enter confirma, Esc cancela, sair do campo confirma. */
 function renomearChat(id) {
   const item = els.historyList.querySelector(`.history-item[data-id="${id}"]`);
   if (!item || !chats[id]) return;
@@ -517,8 +433,6 @@ function renomearChat(id) {
 }
 function loadChat(id) {
   if (!chats[id]) return;
-  // Abrir uma conversa salva sai do modo anônimo: seguir digitando nela sem
-  // que nada fosse gravado seria um comportamento surpreendente.
   if (anonimo) setAnonimo(false);
   saveCurrent();
   chatId = id;
@@ -530,72 +444,49 @@ function loadChat(id) {
   renderHistoryList();
 }
 function deleteChat(id) {
-  const titulo = chats[id]?.title || 'esta conversa';
-  confirmModal('Apagar conversa', `Apagar "${titulo}"? Essa ação não pode ser desfeita.`, () => doDeleteChat(id));
+  confirmModal('Excluir conversa?', 'Esta conversa será excluída permanentemente. Isso não pode ser desfeito.', () => doDeleteChat(id));
 }
 function doDeleteChat(id) {
   delete chats[id];
   salvarChats();
-  // se for a conversa atual, zera o histórico ANTES do newChat pra não re-salvar (bug corrigido)
   if (id === chatId) { history = []; newChat(); }
   renderHistoryList();
   toast('Conversa apagada.');
 }
-/* =====================================================================
-   SIDEBAR — recolher (desktop) e gaveta (mobile)
-   ===================================================================== */
 const SIDEBAR_KEY = 'horus_sidebar_open';
-// Abaixo deste ponto a sidebar não cabe ao lado do conteúdo: ela sobrepõe.
-// O número espelha o @media (max-width: 900px) do style.css.
 const DRAWER_BP = 900;
 const isDrawer = () => window.matchMedia(`(max-width: ${DRAWER_BP}px)`).matches;
 const sidebarIsOpen = () => els.app.classList.contains('is-sidebar-open');
 
 function setSidebar(open) {
   els.app.classList.toggle('is-sidebar-open', open);
-  // o véu só faz sentido no mobile, onde a sidebar cobre o conteúdo;
-  // no desktop ela apenas empurra e o resto da página segue clicável
   els.veil.hidden = !(open && isDrawer());
   $('#sidebarToggle').setAttribute('aria-expanded', String(open));
   if (!open) toggleAccountMenu(false);
-  // só o desktop lembra o estado: no celular a gaveta sempre começa fechada, e o
-  // que se faz nela não deve mudar a preferência salva do desktop
   if (!isDrawer()) lsSet(SIDEBAR_KEY, open ? '1' : '0');
 }
 
-// no mobile a sidebar some ao escolher algo; no desktop ela fica
 function closeSidebarIfMobile() { if (isDrawer()) setSidebar(false); }
 
-/* menu de "conta" no rodapé (Configurações · Servidor · Apagar histórico) */
 function toggleAccountMenu(forcar) {
   const menu = $('#accountMenu');
   const abrir = forcar === undefined ? menu.hidden : forcar;
   menu.hidden = !abrir;
   $('#accountBtn').setAttribute('aria-expanded', String(abrir));
-  if (abrir) icons();   // os ícones do menu só existem quando ele aparece
+  if (abrir) icons();
 }
 
-/* =====================================================================
-   PREFERÊNCIAS — tema, fonte e movimento
-   Tudo aplicado como atributo em <html>, que é onde o CSS espera
-   (:root[data-theme], :root[data-font], :root[data-motion]).
-   ===================================================================== */
 const PREF = { theme: 'horus_theme', font: 'horus_font', motion: 'horus_motion' };
 const raiz = document.documentElement;
 
 const lerPref = (k, padrao) => lsGet(PREF[k], padrao);
 const gravarPref = (k, v) => lsSet(PREF[k], v || null);
 
-// 'dark' é o padrão de primeira visita (a identidade do projeto é escura);
-// 'system' só entra se a pessoa escolher.
 function aplicarTema(v) {
   raiz.setAttribute('data-theme', v);
   gravarPref('theme', v);
   marcarSeg('#themeSeg', 'theme', v);
 }
-// '' = Inter (padrao). Qualquer outro valor precisa existir aqui, senao um
-// valor antigo do localStorage (ex.: o extinto "system") deixaria o atributo
-// pendurado sem regra CSS correspondente.
 const FONTES = ['', 'georgia', 'verdana', 'mono'];
 
 function aplicarFonte(v) {
@@ -615,20 +506,12 @@ function marcarSeg(sel, attr, v) {
     b.classList.toggle('is-active', b.dataset[attr] === v));
 }
 
-/* Monta o seletor de modelo a partir de /models. A lista vem do servidor de
-   propósito: manter uma cópia aqui divergiria da allowlist do backend sem
-   ninguém perceber. Por file:// o fetch falha e o seletor fica só com o
-   "Padrão do servidor", que é o comportamento correto nesse modo. */
 async function carregarModelos() {
   const sel = $('#modelSelect');
   if (!isServed) { sel.disabled = true; return; }
   try {
     const r = await fetch('/models');
     const { modelos = [], padrao } = await r.json();
-    // Só entram ALTERNATIVAS ao padrão. Listar o próprio padrão daria duas
-    // entradas com o mesmo efeito ("Padrão do servidor" e o nome dele), e a
-    // escolha entre elas não mudaria nada. Se um dia a allowlist do servidor
-    // ganhar outros modelos, eles aparecem aqui sozinhos.
     const alternativas = modelos.filter(m => m !== padrao);
     alternativas.forEach(m => {
       const o = document.createElement('option');
@@ -636,7 +519,6 @@ async function carregarModelos() {
       o.textContent = m;
       sel.appendChild(o);
     });
-    // se o modelo salvo saiu da allowlist, volta ao padrão em vez de ficar fantasma
     sel.value = alternativas.includes(modeloEscolhido) ? modeloEscolhido : '';
     if (sel.value !== modeloEscolhido) {
       modeloEscolhido = '';
@@ -647,18 +529,11 @@ async function carregarModelos() {
   }
 }
 
-/* =====================================================================
-   CONVERSA ANÔNIMA
-   ===================================================================== */
 function setAnonimo(on) {
-  // Ao ENTRAR, salva o que estava em andamento (ainda é uma conversa normal).
-  // Ao SAIR, descarta sem salvar — saveCurrent() está travado enquanto anônimo.
   if (on) saveCurrent();
 
   anonimo = on;
   els.app.classList.toggle('is-anon', on);
-  // a faixa vive FORA do .app (é o chrome da janela), então o estado precisa
-  // existir também na raiz para o body e o recuo do painel reagirem
   document.documentElement.classList.toggle('is-anon', on);
   $('#incognitoBtn').setAttribute('aria-pressed', String(on));
   $('#anonBar').hidden = !on;
@@ -666,19 +541,16 @@ function setAnonimo(on) {
   $('#headlineNormal').hidden = on;
   $('#headlineAnon').hidden = !on;
   if (on) {
-    setSidebar(false);   // a "janela" anônima não tem histórico ao lado
-    icons();             // desenha o X da barra, criado só agora
+    setSidebar(false);
+    icons();
   }
 
-  // conversa nova em qualquer direção: o que foi dito num modo não vaza pro outro
   resetConversa();
 
-  // Sem toast aqui: a faixa no topo e a frase abaixo do campo ja dizem o
-  // estado o tempo todo. Um aviso extra a cada entrada/saida so atrapalha.
 }
 
 function clearAllHistory() {
-  confirmModal('Apagar histórico', 'Isso vai apagar TODAS as conversas salvas. Essa ação não pode ser desfeita.', () => {
+  confirmModal('Apagar todo o histórico?', 'Todas as conversas salvas serão excluídas permanentemente. Isso não pode ser desfeito.', () => {
     chats = {};
     lsSet(STORE_KEY, null);
     $('#settingsModal').hidden = true;
@@ -688,9 +560,6 @@ function clearAllHistory() {
   });
 }
 
-/* =====================================================================
-   ANEXOS (Attach)
-   ===================================================================== */
 function renderAttachTags() {
   els.attachTags.innerHTML = attachments.map((f, i) =>
     `<span class="attach-tag"><i data-lucide="file"></i>${escapeHtml(f.name)}
@@ -714,53 +583,23 @@ els.fileInput.onchange = (e) => {
   els.fileInput.value = '';
 };
 
-/* =====================================================================
-   STATUS DO SERVIDOR (modal de configurações)
-   ===================================================================== */
-async function checkServer() {
-  if (!isServed) {
-    els.serverStatus.textContent = 'Aberto via file:// — rode o Python para conversar.';
-    els.statusDot.className = 'status-dot is-off';
-    return;
-  }
-  try {
-    const r = await fetch('/health');
-    const d = await r.json();
-    els.serverStatus.textContent = d.status || 'Online';
-    els.statusDot.className = 'status-dot is-on';
-  } catch {
-    els.serverStatus.textContent = 'Offline — inicie o servidor Python.';
-    els.statusDot.className = 'status-dot is-off';
-  }
-}
-
-/* =====================================================================
-   LIGAÇÃO DOS BOTÕES
-   ===================================================================== */
 els.send.onclick = () => send();
 els.input.addEventListener('input', autoGrow);
 els.input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
 
-// sidebar
-$('#logoBtn').onclick = () => { goHomeView(); closeSidebarIfMobile(); };
 $('#newChatBtn').onclick = () => { newChat(); closeSidebarIfMobile(); };
 
-// abrir (quadradinho do canto) e fechar (botão dentro da sidebar)
 $('#incognitoBtn').onclick = () => setAnonimo(true);
 $('#anonClose').onclick = () => setAnonimo(false);
 $('#sidebarOpen').onclick = () => setSidebar(true);
 $('#sidebarToggle').onclick = () => setSidebar(false);
 els.veil.onclick = () => setSidebar(false);
-// ao voltar para o desktop o véu perde o sentido; a sidebar em si continua
 addEventListener('resize', () => { els.veil.hidden = !(sidebarIsOpen() && isDrawer()); });
 
-// menu "⋮" das conversas
 const ACOES_CHAT = { pin: fixarChat, rename: renomearChat, delete: deleteChat };
 
-/* Fecha o menu ANTES de agir: renomear substitui o item por um <input>, e um
-   menu ainda aberto ficaria flutuando sobre um elemento que sumiu. */
 function executarAcaoChat(acao) {
   const id = menuChatId;
   fecharMenuChat();
@@ -770,7 +609,6 @@ function executarAcaoChat(acao) {
 $('#chatMenu').querySelectorAll('.chat-menu__item').forEach(b => {
   b.onclick = (e) => { e.stopPropagation(); executarAcaoChat(b.dataset.act); };
 });
-// os atalhos exibidos no menu (P/R/D) funcionam de verdade enquanto ele está aberto
 addEventListener('keydown', (e) => {
   if (menuChatId === null || e.ctrlKey || e.altKey || e.metaKey) return;
   const acao = { p: 'pin', r: 'rename', d: 'delete' }[e.key.toLowerCase()];
@@ -779,12 +617,9 @@ addEventListener('keydown', (e) => {
   executarAcaoChat(acao);
 });
 
-// menu do rodapé (no lugar da linha de conta de outros apps)
 $('#accountBtn').onclick = (e) => { e.stopPropagation(); toggleAccountMenu(); };
-$('#menuSettings').onclick = () => { toggleAccountMenu(false); checkServer(); $('#settingsModal').hidden = false; };
-$('#menuStatus').onclick = () => { checkServer(); toast('Verificando o servidor…', 1200); };
+$('#menuSettings').onclick = () => { toggleAccountMenu(false); $('#settingsModal').hidden = false; };
 $('#menuClear').onclick = () => { toggleAccountMenu(false); clearAllHistory(); };
-// clique fora fecha o menu; dentro do rodapé, não
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.sidebar__foot')) toggleAccountMenu(false);
   if (!e.target.closest('#chatMenu')) fecharMenuChat();
@@ -795,54 +630,349 @@ addEventListener('keydown', (e) => {
   else if (!$('#accountMenu').hidden) toggleAccountMenu(false);
   else closeSidebarIfMobile();
 });
-// a lista rola: se o item sair do lugar, o menu ficaria solto no ar
 els.historyList.addEventListener('scroll', fecharMenuChat);
 addEventListener('resize', fecharMenuChat);
 
 $('#settingsClose').onclick = $('#settingsDone').onclick = () => { $('#settingsModal').hidden = true; };
 
-// ── preferências ──
 $('#themeSeg').querySelectorAll('button').forEach(b =>
   b.onclick = () => aplicarTema(b.dataset.theme));
 $('#motionSeg').querySelectorAll('button').forEach(b =>
   b.onclick = () => aplicarMovimento(b.dataset.motion));
 $('#fontSelect').onchange = (e) => aplicarFonte(e.target.value);
 
-// ── modelo da IA ──
 $('#modelSelect').onchange = (e) => {
   modeloEscolhido = e.target.value;
   lsSet(MODEL_KEY, modeloEscolhido || null);
   toast(modeloEscolhido ? `Modelo: ${modeloEscolhido}` : 'Usando o modelo padrão do servidor.', 1600);
 };
 
-// modal de confirmação (vidro)
 $('#confirmOk').onclick = () => { const cb = _confirmCb; closeConfirm(); if (cb) cb(); };
 $('#confirmCancel').onclick = closeConfirm;
-$('#confirmClose').onclick = closeConfirm;
 $('#confirmModal').addEventListener('click', (e) => { if (e.target.id === 'confirmModal') closeConfirm(); });
-// fecha modal clicando fora
 $('#settingsModal').addEventListener('click', (e) => {
   if (e.target.id === 'settingsModal') $('#settingsModal').hidden = true;
 });
 
-/* =====================================================================
-   INICIALIZAÇÃO
-   ===================================================================== */
-// a lista de conversas vive na sidebar e está sempre à vista: precisa ser
-// desenhada no load, e não só quando um painel era aberto
 renderHistoryList();
 
-// A sidebar começa FECHADA (home limpa, só o quadradinho no canto). Se o
-// usuário a deixou aberta na visita anterior, ela volta aberta.
 setSidebar(!isDrawer() && lsGet(SIDEBAR_KEY) === '1');
 
-// preferências salvas (tema padrão = escuro, a identidade do projeto)
 aplicarTema(lerPref('theme', 'dark'));
 aplicarFonte(lerPref('font', ''));
 aplicarMovimento(lerPref('motion', 'system'));
 
-// status inicial discreto (agora exibido no menu do rodapé da sidebar)
-// As duas ja tratam erro por dentro; o .catch() aqui e a ultima rede: se um
-// dia o try/catch interno sair, isso evita unhandled rejection silencioso.
-checkServer().catch(() => {});
 carregarModelos().catch(() => {});
+
+const IDIOMAS = [
+  ['pt-BR', 'Português (Brasil)', 'Portuguese (Brazil)'], ['pt-PT', 'Português (Portugal)', 'Portuguese (Portugal)'],
+  ['en-US', 'English (United States)', 'English (United States)'], ['en-GB', 'English (United Kingdom)', 'English (United Kingdom)'],
+  ['es-419', 'Español (Latinoamérica)', 'Spanish (Latin America)'], ['es-ES', 'Español (España)', 'Spanish (Spain)'],
+  ['fr-FR', 'Français (France)', 'French (France)'], ['de-DE', 'Deutsch (Deutschland)', 'German (Germany)'],
+  ['it-IT', 'Italiano (Italia)', 'Italian (Italy)'], ['nl-NL', 'Nederlands', 'Dutch'],
+  ['da-DK', 'Dansk', 'Danish'], ['sv-SE', 'Svenska', 'Swedish'], ['nb-NO', 'Norsk bokmål', 'Norwegian'],
+  ['fi-FI', 'Suomi', 'Finnish'], ['pl-PL', 'Polski', 'Polish'], ['cs-CZ', 'Čeština', 'Czech'],
+  ['ro-RO', 'Română', 'Romanian'], ['hu-HU', 'Magyar', 'Hungarian'], ['el-GR', 'Ελληνικά', 'Greek'],
+  ['ru-RU', 'Русский', 'Russian'], ['uk-UA', 'Українська', 'Ukrainian'], ['tr-TR', 'Türkçe', 'Turkish'],
+  ['ar', 'العربية', 'Arabic'], ['he-IL', 'עברית', 'Hebrew'], ['fa-IR', 'فارسی', 'Persian'], ['ur-PK', 'اردو', 'Urdu'],
+  ['hi-IN', 'हिन्दी (भारत)', 'Hindi (India)'], ['bn-BD', 'বাংলা', 'Bangla'], ['bho-IN', 'भोजपुरी', 'Bhojpuri'],
+  ['gu-IN', 'ગુજરાતી', 'Gujarati'], ['mr-IN', 'मराठी', 'Marathi'], ['pa-IN', 'ਪੰਜਾਬੀ', 'Punjabi'],
+  ['ta-IN', 'தமிழ்', 'Tamil'], ['te-IN', 'తెలుగు', 'Telugu'], ['kn-IN', 'ಕನ್ನಡ', 'Kannada'],
+  ['ml-IN', 'മലയാളം', 'Malayalam'], ['ne-NP', 'नेपाली', 'Nepali'],
+  ['zh-CN', '中文（简体）', 'Chinese (Simplified)'], ['zh-TW', '中文（繁體）', 'Chinese (Traditional)'],
+  ['ja-JP', '日本語 (日本)', 'Japanese (Japan)'], ['ko-KR', '한국어 (대한민국)', 'Korean (South Korea)'],
+  ['id-ID', 'Indonesia (Indonesia)', 'Indonesian (Indonesia)'], ['ms-MY', 'Bahasa Melayu', 'Malay'],
+  ['fil-PH', 'Filipino', 'Filipino'], ['th-TH', 'ไทย', 'Thai'], ['vi-VN', 'Tiếng Việt', 'Vietnamese'],
+  ['sw', 'Kiswahili', 'Swahili'], ['am-ET', 'አማርኛ', 'Amharic'], ['ha', 'Hausa', 'Hausa'],
+  ['yo', 'Yorùbá', 'Yoruba'], ['zu', 'isiZulu', 'Zulu'],
+];
+
+const TEXTOS = {
+  pt: {
+    uso: 'Uso', idioma: 'Idioma', usoHoje: 'Mensagens hoje', usoTotal: 'mensagens enviadas', usoConversas: 'conversas salvas',
+    escolhaIdioma: 'Escolha seu idioma', idiomaNota: 'O Astra passa a responder no idioma escolhido.',
+    busca: 'Pesquisar idiomas', nada: 'Nenhum idioma encontrado.',
+    limite: (d, m) => `Limite: ${d} mensagens por dia e ${m} por minuto.`, trocado: (n) => `Idioma: ${n}`,
+  },
+  en: {
+    uso: 'Usage', idioma: 'Language', usoHoje: 'Messages today', usoTotal: 'messages sent', usoConversas: 'saved chats',
+    escolhaIdioma: 'Choose your language', idiomaNota: 'Astra will reply in the language you choose.',
+    busca: 'Search languages', nada: 'No language found.',
+    limite: (d, m) => `Limit: ${d} messages per day and ${m} per minute.`, trocado: (n) => `Language: ${n}`,
+  },
+  es: {
+    uso: 'Uso', idioma: 'Idioma', usoHoje: 'Mensajes hoy', usoTotal: 'mensajes enviados', usoConversas: 'conversaciones guardadas',
+    escolhaIdioma: 'Elige tu idioma', idiomaNota: 'Astra responderá en el idioma elegido.',
+    busca: 'Buscar idiomas', nada: 'Ningún idioma encontrado.',
+    limite: (d, m) => `Límite: ${d} mensajes por día y ${m} por minuto.`, trocado: (n) => `Idioma: ${n}`,
+  },
+};
+
+IDIOMAS.sort((a, b) => a[2].localeCompare(b[2]));
+let idiomaEscolhido = lsGet('astra_idioma', 'pt-BR');
+if (!IDIOMAS.some(([c]) => c === idiomaEscolhido)) idiomaEscolhido = 'pt-BR';
+const txt = () => TEXTOS[idiomaEscolhido.slice(0, 2)] || TEXTOS.pt;
+
+function aplicarIdioma() {
+  const t = txt();
+  document.documentElement.lang = idiomaEscolhido;
+  document.querySelectorAll('[data-t]').forEach((el) => {
+    if (typeof t[el.dataset.t] === 'string') el.textContent = t[el.dataset.t];
+  });
+  $('#idiomaBusca').placeholder = t.busca;
+  const atual = IDIOMAS.find(([c]) => c === idiomaEscolhido);
+  $('#idiomaAtual').textContent = atual ? atual[1].replace(/\s*[（(].*[)）]$/, '') : '';
+}
+
+function montarIdiomas(filtro = '') {
+  const f = filtro.trim().toLowerCase();
+  const lista = IDIOMAS.filter(([, n, e]) => !f || n.toLowerCase().includes(f) || e.toLowerCase().includes(f));
+  $('#idiomaGrade').innerHTML = lista.length
+    ? lista.map(([c, n, e]) => `<button type="button" class="idioma-item${c === idiomaEscolhido ? ' is-ativo' : ''}" data-codigo="${c}" role="option" aria-selected="${c === idiomaEscolhido}"><strong>${escapeHtml(n)}</strong><span>${escapeHtml(e)}</span></button>`).join('')
+    : `<p class="idioma-vazio">${txt().nada}</p>`;
+}
+
+$('#idiomaGrade').addEventListener('click', (e) => {
+  const item = e.target.closest('.idioma-item');
+  if (!item) return;
+  idiomaEscolhido = item.dataset.codigo;
+  lsSet('astra_idioma', idiomaEscolhido);
+  aplicarIdioma();
+  $('#idiomaModal').hidden = true;
+  toast(txt().trocado(IDIOMAS.find(([c]) => c === idiomaEscolhido)[1]), 1600);
+});
+$('#idiomaBusca').addEventListener('input', (e) => montarIdiomas(e.target.value));
+$('#menuIdioma').onclick = () => {
+  toggleAccountMenu(false);
+  $('#idiomaBusca').value = '';
+  montarIdiomas();
+  $('#idiomaModal').hidden = false;
+  icons();
+  setTimeout(() => $('#idiomaBusca').focus(), 50);
+};
+
+const hojeISO = () => new Date().toISOString().slice(0, 10);
+function lerUso() {
+  let u;
+  try { u = JSON.parse(lsGet('astra_uso', '{}')) || {}; } catch { u = {}; }
+  if (u.dia !== hojeISO()) u = { dia: hojeISO(), hoje: 0, total: u.total || 0 };
+  return u;
+}
+function contarUso() {
+  const u = lerUso();
+  u.hoje += 1;
+  u.total = (u.total || 0) + 1;
+  lsSet('astra_uso', JSON.stringify(u));
+}
+const numeroDoLimite = (texto) => parseInt((String(texto).match(/\d+/) || ['0'])[0], 10);
+async function abrirUso() {
+  toggleAccountMenu(false);
+  const u = lerUso();
+  $('#usoHoje').textContent = u.hoje;
+  $('#usoTotal').textContent = u.total || 0;
+  $('#usoConversas').textContent = Object.keys(chats).length;
+  $('#usoLimite').textContent = '';
+  $('#usoBarra').style.width = '0';
+  $('#usoModal').hidden = false;
+  icons();
+  if (!isServed) return;
+  try {
+    const l = await (await fetch('/limites')).json();
+    const porDia = numeroDoLimite(l.por_dia);
+    const porMinuto = numeroDoLimite(l.por_minuto);
+    $('#usoHoje').textContent = `${u.hoje} / ${porDia}`;
+    $('#usoLimite').textContent = txt().limite(porDia, porMinuto);
+    $('#usoBarra').style.width = `${Math.min(100, (u.hoje / (porDia || 1)) * 100)}%`;
+  } catch {  }
+}
+$('#menuUso').onclick = abrirUso;
+
+[['usoModal', 'usoFechar'], ['idiomaModal', 'idiomaFechar']].forEach(([modal, botao]) => {
+  $('#' + botao).onclick = () => { $('#' + modal).hidden = true; };
+  $('#' + modal).addEventListener('click', (e) => { if (e.target.id === modal) $('#' + modal).hidden = true; });
+});
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') ['usoModal', 'idiomaModal'].forEach((m) => { $('#' + m).hidden = true; });
+});
+
+aplicarIdioma();
+
+(() => {
+  const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const botao = $('#micBtn');
+  if (!Reconhecimento || !botao) return;
+  botao.hidden = false;
+
+  let rec = null;
+  let base = '';
+
+  function parar() { if (rec) rec.stop(); }
+  function marcar(ouvindo) {
+    botao.classList.toggle('is-ouvindo', ouvindo);
+    botao.setAttribute('aria-pressed', String(ouvindo));
+    botao.title = ouvindo ? 'Parar' : 'Falar';
+  }
+
+  botao.addEventListener('click', () => {
+    if (rec) { parar(); return; }
+    rec = new Reconhecimento();
+    rec.lang = idiomaEscolhido;
+    rec.interimResults = true;
+    rec.continuous = true;
+    base = els.input.value ? els.input.value.replace(/\s*$/, ' ') : '';
+
+    rec.onresult = (e) => {
+      let falado = '';
+      for (let i = 0; i < e.results.length; i++) falado += e.results[i][0].transcript;
+      els.input.value = (base + falado).slice(0, 4000);
+      autoGrow();
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Permita o uso do microfone para falar.', 2200);
+      else if (e.error === 'no-speech') toast('Não ouvi nada. Tente de novo.', 1600);
+      else if (e.error !== 'aborted') toast('Não foi possível usar o microfone agora.', 2000);
+    };
+    rec.onend = () => { rec = null; marcar(false); els.input.focus(); };
+    try { rec.start(); marcar(true); } catch { rec = null; }
+  });
+
+  els.send.addEventListener('click', parar, true);
+  els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) parar(); }, true);
+})();
+
+$('#logoBtn').onclick = () => {
+  if (!window.AstraCarregando) { location.href = '/'; return; }
+  AstraCarregando.ir('/', 'voltando');
+};
+
+const INTERFACE = {
+  'Astra — Código, Revisão & Segurança': ['Astra — your AI for any question', 'Astra — tu IA para cualquier duda'],
+  'Anônimo': ['Incognito', 'Incógnito'],
+  'Sair do chat anônimo': ['Leave incognito chat', 'Salir del chat incógnito'],
+  'Voltar para a página inicial': ['Back to home page', 'Volver a la página de inicio'],
+  'Recolher menu': ['Collapse menu', 'Contraer menú'],
+  'Abrir menu': ['Open menu', 'Abrir menú'],
+  'Nova conversa': ['New chat', 'Nueva conversación'],
+  'Recentes': ['Recents', 'Recientes'],
+  'Configurações': ['Settings', 'Configuración'],
+  'Apagar histórico': ['Delete history', 'Borrar historial'],
+  '· Local': ['· Local', '· Local'],
+  'Conversa anônima': ['Incognito chat', 'Conversación incógnita'],
+  'Vamos programar': ["Let's get started", 'Empecemos'],
+  'Você está no modo anônimo': ["You're in incognito mode", 'Estás en modo incógnito'],
+  'Como posso ajudar você hoje?': ['How can I help you today?', '¿Cómo puedo ayudarte hoy?'],
+  'Anexar arquivo': ['Attach file', 'Adjuntar archivo'],
+  'Falar': ['Speak', 'Hablar'],
+  'Parar': ['Stop', 'Detener'],
+  'Enviar': ['Send', 'Enviar'],
+  'Esta conversa não será salva no histórico deste navegador.': ["This chat won't be saved in this browser's history.", 'Esta conversación no se guardará en el historial de este navegador.'],
+  'As mensagens continuam sendo enviadas ao servidor para gerar a resposta.': ['Messages are still sent to the server to generate the reply.', 'Los mensajes se siguen enviando al servidor para generar la respuesta.'],
+  'Fechar': ['Close', 'Cerrar'],
+  'Fechar configurações': ['Close settings', 'Cerrar configuración'],
+  'Preferências': ['Preferences', 'Preferencias'],
+  'Aparência': ['Appearance', 'Apariencia'],
+  'Sistema': ['System', 'Sistema'],
+  'Claro': ['Light', 'Claro'],
+  'Escuro': ['Dark', 'Oscuro'],
+  'Fonte do chat': ['Chat font', 'Fuente del chat'],
+  'Monoespaçada': ['Monospace', 'Monoespaciada'],
+  'Movimento': ['Motion', 'Movimiento'],
+  'Reduzir animações da interface.': ['Reduce interface animations.', 'Reducir las animaciones de la interfaz.'],
+  'Reduzido': ['Reduced', 'Reducido'],
+  'Modelo': ['Model', 'Modelo'],
+  'Modelo da IA': ['AI model', 'Modelo de IA'],
+  'Vale para as próximas mensagens.': ['Applies to your next messages.', 'Se aplica a los próximos mensajes.'],
+  'Padrão do servidor': ['Server default', 'Predeterminado del servidor'],
+  'As conversas ficam salvas só no seu navegador.': ['Chats are saved only in your browser.', 'Las conversaciones se guardan solo en tu navegador.'],
+  'Idiomas': ['Languages', 'Idiomas'],
+  'Cancelar': ['Cancel', 'Cancelar'],
+  'Apagar': ['Delete', 'Eliminar'],
+  'Fixar': ['Pin', 'Fijar'],
+  'Desafixar': ['Unpin', 'Desfijar'],
+  'Mudar o nome': ['Rename', 'Cambiar el nombre'],
+  'Remover': ['Remove', 'Quitar'],
+  'Menu': ['Menu', 'Menú'],
+  'Copiar': ['Copy', 'Copiar'],
+  'Copiar código': ['Copy code', 'Copiar código'],
+  'Copiado!': ['Copied!', '¡Copiado!'],
+  'Não copiou': ["Couldn't copy", 'No se copió'],
+  'Nenhuma conversa ainda.': ['No chats yet.', 'Aún no hay conversaciones.'],
+  'Conversa fixada.': ['Chat pinned.', 'Conversación fijada.'],
+  'Conversa desafixada.': ['Chat unpinned.', 'Conversación desfijada.'],
+  'Nome alterado.': ['Name changed.', 'Nombre cambiado.'],
+  'Conversa apagada.': ['Chat deleted.', 'Conversación eliminada.'],
+  'Histórico apagado.': ['History deleted.', 'Historial borrado.'],
+  'Excluir conversa?': ['Delete chat?', '¿Eliminar conversación?'],
+  'Esta conversa será excluída permanentemente. Isso não pode ser desfeito.': ['This chat will be permanently deleted. This cannot be undone.', 'Esta conversación se eliminará permanentemente. Esto no se puede deshacer.'],
+  'Apagar todo o histórico?': ['Delete all history?', '¿Borrar todo el historial?'],
+  'Todas as conversas salvas serão excluídas permanentemente. Isso não pode ser desfeito.': ['All saved chats will be permanently deleted. This cannot be undone.', 'Todas las conversaciones guardadas se eliminarán permanentemente. Esto no se puede deshacer.'],
+  'Usando o modelo padrão do servidor.': ['Using the server default model.', 'Usando el modelo predeterminado del servidor.'],
+  'Permita o uso do microfone para falar.': ['Allow microphone access to speak.', 'Permite el uso del micrófono para hablar.'],
+  'Não ouvi nada. Tente de novo.': ["I didn't hear anything. Try again.", 'No escuché nada. Inténtalo de nuevo.'],
+  'Não foi possível usar o microfone agora.': ["Couldn't use the microphone right now.", 'No se pudo usar el micrófono ahora.'],
+};
+const ATRIBUTOS_TRADUZIVEIS = ['title', 'aria-label', 'placeholder'];
+const originalDoTexto = new WeakMap();
+
+function indiceInterface() {
+  const l = idiomaEscolhido.slice(0, 2);
+  return l === 'en' ? 0 : l === 'es' ? 1 : -1;
+}
+function eVersaoDe(valor, base) {
+  const chave = base.trim();
+  return valor === base || (INTERFACE[chave] || []).some((tr) => valor === base.replace(chave, tr));
+}
+function traduzirNo(no, i) {
+  const pai = no.parentElement;
+  if (!pai || (pai.closest('#messages') && !pai.closest('button'))) return;
+  if (pai.closest('script, style, textarea')) return;
+  let base = originalDoTexto.has(no) ? originalDoTexto.get(no) : no.nodeValue;
+  if (!eVersaoDe(no.nodeValue, base)) base = no.nodeValue;
+  const chave = base.trim();
+  if (!INTERFACE[chave]) return;
+  originalDoTexto.set(no, base);
+  const valor = i < 0 ? base : base.replace(chave, INTERFACE[chave][i]);
+  if (no.nodeValue !== valor) no.nodeValue = valor;
+}
+function traduzirAtributos(el, i) {
+  ATRIBUTOS_TRADUZIVEIS.forEach((attr) => {
+    if (!el.hasAttribute(attr)) return;
+    const guardado = 'orig' + attr.replace(/-./g, (m) => m[1].toUpperCase()).replace(/^./, (m) => m.toUpperCase());
+    const atual = el.getAttribute(attr);
+    let base = el.dataset[guardado] ?? atual;
+    if (!eVersaoDe(atual, base)) base = atual;
+    if (!INTERFACE[base]) return;
+    el.dataset[guardado] = base;
+    const valor = i < 0 ? base : INTERFACE[base][i];
+    if (el.getAttribute(attr) !== valor) el.setAttribute(attr, valor);
+  });
+}
+function traduzirArvore(raiz, i = indiceInterface()) {
+  if (raiz.nodeType === Node.TEXT_NODE) { traduzirNo(raiz, i); return; }
+  if (raiz.nodeType !== Node.ELEMENT_NODE) return;
+  if (!raiz.closest('#messages') || raiz.closest('button')) traduzirAtributos(raiz, i);
+  raiz.querySelectorAll('[title], [aria-label], [placeholder]').forEach((el) => {
+    if (!el.closest('#messages') || el.closest('button')) traduzirAtributos(el, i);
+  });
+  const andar = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
+  while (andar.nextNode()) traduzirNo(andar.currentNode, i);
+}
+function traduzirInterface() {
+  const i = indiceInterface();
+  const tituloBase = document.documentElement.dataset.tituloOriginal || document.title;
+  document.documentElement.dataset.tituloOriginal = tituloBase;
+  document.title = i < 0 || !INTERFACE[tituloBase] ? tituloBase : INTERFACE[tituloBase][i];
+  traduzirArvore(document.body, i);
+}
+new MutationObserver((mudancas) => {
+  if (indiceInterface() < 0) return;
+  mudancas.forEach((m) => {
+    if (m.type === 'characterData') traduzirNo(m.target, indiceInterface());
+    else if (m.type === 'attributes') traduzirAtributos(m.target, indiceInterface());
+    else m.addedNodes.forEach((n) => traduzirArvore(n));
+  });
+}).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATRIBUTOS_TRADUZIVEIS });
+
+const aplicarIdiomaSemInterface = aplicarIdioma;
+aplicarIdioma = function () { aplicarIdiomaSemInterface(); traduzirInterface(); };
+traduzirInterface();

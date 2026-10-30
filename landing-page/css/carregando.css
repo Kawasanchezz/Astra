@@ -1,0 +1,61 @@
+.carregando {
+  --cg-fundo: #191817;
+  --cg-texto: #cfd5e0;
+  --cg-linha: rgba(250, 249, 245, 0.09);
+  --p: 0;
+
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--cg-fundo);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+.carregando.ativo { opacity: 1; visibility: visible; transition: opacity 0.35s ease; }
+.carregando.sem-fade { transition: none; }
+
+:root[data-theme="light"] .carregando { --cg-fundo: #faf9f5; --cg-texto: #1c1c1a; --cg-linha: rgba(28, 28, 26, 0.1); }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] .carregando { --cg-fundo: #faf9f5; --cg-texto: #1c1c1a; --cg-linha: rgba(28, 28, 26, 0.1); }
+}
+
+.carregando img { width: 64px; height: 64px; animation: cg-giro 2s cubic-bezier(0.6, 0, 0.4, 1) infinite; }
+.carregando p {
+  font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cg-texto);
+}
+.cg-pontinhos i { font-style: normal; animation: cg-ponto 1.2s infinite; opacity: 0; }
+.cg-pontinhos i:nth-child(2) { animation-delay: 0.2s; }
+.cg-pontinhos i:nth-child(3) { animation-delay: 0.4s; }
+.cg-barra { width: min(220px, 60vw); height: 1px; background: var(--cg-linha); overflow: hidden; }
+.cg-barra i {
+  display: block;
+  height: 100%;
+  width: calc(var(--p) * 100%);
+  background: linear-gradient(100deg, #dbe4f3, #b4c4e2 30%, #92a8d1 60%, #6f88b8);
+}
+
+@keyframes cg-giro {
+  0% { transform: rotate(0) scale(1); }
+  50% { transform: rotate(180deg) scale(0.86); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes cg-ponto { 0%, 20% { opacity: 0; } 40%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .carregando img, .cg-pontinhos i { animation: none; opacity: 1; } }
+
+.cg-escondido body > *:not(.carregando):not(script) { opacity: 0; }
+
+.cg-saindo body > *:not(.carregando):not(script) {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.cg-saindo .carregando.ativo { transition: opacity 0.35s ease 0.18s; }

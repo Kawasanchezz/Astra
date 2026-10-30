@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astra — sua IA para qualquer dúvida</title>
+  <meta name="description" content="Astra: assistente de IA em português para tirar dúvidas de qualquer assunto, com especialidade em tecnologia. Sem cadastro.">
+  <link rel="icon" href="favicon.ico?v=4" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png?v=4">
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png?v=3">
+  <link rel="preload" href="assets/fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/plex-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="js/tema.js"></script>
+  <link rel="stylesheet" href="css/home.css?v=10">
+  <link rel="stylesheet" href="css/carregando.css?v=8">
+</head>
+<body>
+  <div class="carregando" id="carregando" role="status" aria-live="polite" data-entrada>
+    <img src="assets/images/logo-astra.png" alt="">
+    <p><span class="cg-estado">Carregando o Astra</span><span class="cg-pontinhos"><i>.</i><i>.</i><i>.</i></span></p>
+    <div class="cg-barra"><i></i></div>
+  </div>
+  <script src="js/carregando.js?v=12"></script>
+  <canvas id="cena" aria-hidden="true"></canvas>
+
+  <div class="grade" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <div class="faixa" id="faixa">
+    <a href="/app" data-i18n-html="faixa"><b>Novo:</b> o Astra está no ar — sua IA para qualquer dúvida ↗</a>
+    <button type="button" id="faixaFechar" aria-label="Fechar aviso">×</button>
+  </div>
+
+  <nav class="nav" id="nav">
+    <a class="logo" href="#inicio" aria-label="Astra, início">
+      <img src="assets/images/logo-astra.png" alt="">
+      <span>ASTRA</span>
+    </a>
+    <div class="menu">
+      <a href="#recursos" data-i18n="recursos">Recursos</a>
+      <a href="#exemplos" data-i18n="exemplos">Exemplos</a>
+      <a href="/app">Chat</a>
+    </div>
+    <a class="nav-pad" href="/app" data-i18n="semCadastro">Sem cadastro ↗</a>
+    <div class="nav-acoes">
+    <button type="button" class="tema-botao" id="temaBotao" aria-label="Alternar tema claro e escuro" title="Tema claro / escuro">
+      <svg class="ico-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="ico-lua" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
+    <div class="idioma-lp">
+      <button type="button" class="idioma-botao" id="idiomaBotao" aria-haspopup="menu" aria-expanded="false" aria-label="Idioma / Language">PT</button>
+      <div class="idioma-menu" id="idiomaMenu" role="menu" hidden>
+        <button type="button" role="menuitemradio" data-lang="pt-BR">Português</button>
+        <button type="button" role="menuitemradio" data-lang="en-US">English</button>
+        <button type="button" role="menuitemradio" data-lang="es-419">Español</button>
+      </div>
+    </div>
+    <a class="botao" href="/app"><span class="botao-pontos">••</span> <span data-i18n="abrir">ABRIR O ASTRA</span></a>
+    </div>
+  </nav>
+
+  <aside class="trilho" aria-hidden="true">
+    <div class="trilho-pontos"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="trilho-rotulo" id="trilhoRotulo">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M8 8 12 5"/></svg>
+      <span id="trilhoTexto">INÍCIO</span>
+    </div>
+    <div class="trilho-menu">≡ <span data-i18n="menu">MENU</span></div>
+  </aside>
+
+  <main>
+    <section class="secao inicio" id="inicio" data-rotulo="INÍCIO" data-pos="0">
+      <a class="prompt rv" href="/app" aria-label="Abrir o Astra">
+        <span class="prompt-aba">“</span>
+        <span class="prompt-caixa">
+          <i class="canto c1"></i><i class="canto c2"></i><i class="canto c3"></i><i class="canto c4"></i>
+          <span id="digitando"></span><span class="cursor"></span>
+        </span>
+        <span class="prompt-proximo" id="proximo"></span>
+      </a>
+
+      <div class="regua-prompt rv"></div>
+
+      <ul class="lista rv">
+        <li data-i18n="l1">PROGRAMAÇÃO</li>
+        <li data-i18n="l2">ESTUDOS</li>
+        <li data-i18n="l3">IDIOMAS</li>
+        <li class="dim" data-i18n="l4">E MUITO MAIS</li>
+      </ul>
+
+      <div class="titulo-inicio">
+        <p class="sobre rv" data-i18n="sobre">PERGUNTE QUALQUER COISA PARA A</p>
+        <h1 class="rv">
+          <span class="gcaixa g1" data-i18n="h1a">Sua IA para</span><br>
+          <span class="gcaixa g2" data-i18n="h1b">qualquer dúvida</span>
+        </h1>
+      </div>
+
+      <p class="sub rv" data-i18n="sub">Assistente de IA em português. Sem cadastro: é só abrir e perguntar.</p>
+
+      <a class="rolar rv" href="#recursos">
+        <i class="canto c1"></i><i class="canto c2"></i><i class="canto c3"></i><i class="canto c4"></i>
+        <span data-i18n="rolar">ROLAR</span> <span class="seta-baixo">↓</span>
+      </a>
+      <div class="regua-base"></div>
+    </section>
+
+    <section class="secao recursos" id="recursos" data-rotulo="RECURSOS" data-pos="31">
+      <div class="abas rv">
+        <div class="abas-trilho" id="abasTrilho"></div>
+      </div>
+
+      <div class="titulo-recursos">
+        <p class="mono rv">··</p>
+        <h2 class="rv"><span class="contorno" data-i18n="h2a">Tudo o que você</span><br><span data-i18n="h2b">precisa, num só chat</span></h2>
+      </div>
+    </section>
+
+    <section class="secao exemplos" id="exemplos" data-rotulo="EXEMPLOS" data-pos="62">
+      <div class="cabeca rv">
+        <span class="cabeca-tag"><span data-i18n="pergunta">PERGUNTA</span> <span class="colchete" id="exNumero">01</span></span>
+        <span class="cabeca-avatar" aria-hidden="true"><img src="assets/images/logo-astra.png" alt=""></span>
+        <span class="cabeca-nome"><i></i><span id="exTema">ECONOMIA</span></span>
+        <span class="cabeca-papel" id="exTipo" data-i18n="exTipo">EXEMPLO DE PERGUNTA</span>
+      </div>
+
+      <blockquote class="citacao rv">
+        <p id="exTexto"></p>
+        <a class="experimente" href="/app" data-i18n="experimente">Pergunte você também (Abrir o Astra)</a>
+      </blockquote>
+
+      <div class="setas rv">
+        <button type="button" id="exAnterior" aria-label="Exemplo anterior">←</button>
+        <button type="button" id="exProximo" aria-label="Próximo exemplo">→</button>
+      </div>
+
+      <p class="fantasma" id="exFantasma" aria-hidden="true"></p>
+    </section>
+
+  </main>
+
+  <script type="module" src="js/home.js?v=9"></script>
+</body>
+</html>
