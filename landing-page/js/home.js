@@ -275,7 +275,6 @@ function iniciarRobo() {
   const largura = () => innerWidth;
   const altura = () => innerHeight;
   const VAGAS = [0.46, 0.47, 0.56];
-  const secoesCena = [...document.querySelectorAll('.secao')];
   matchMedia('(max-width: 899px)').addEventListener('change', () => location.reload());
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setSize(largura(), altura(), false);
@@ -334,11 +333,6 @@ function iniciarRobo() {
   const estrela3d = new THREE.Mesh(geoEstrela, estrelaMat);
   estrela3d.castShadow = true;
   simbolo.add(estrela3d);
-  const LIMITES = [
-    [document.querySelector('.prompt'), document.querySelector('.titulo-inicio')],
-    [document.querySelector('.abas'), document.querySelector('.titulo-recursos')],
-    [document.querySelector('.citacao'), document.querySelector('.setas')],
-  ];
   const copias = celular ? [0].map(() => {
     const g = new THREE.Group();
     g.add(new THREE.Mesh(geoEstrela, estrelaMat));
@@ -399,22 +393,13 @@ function iniciarRobo() {
       camera.lookAt(0, 0, 0);
       const alturaVista = 2 * dist * Math.tan(THREE.MathUtils.degToRad(15));
       const pxPorUnidade = innerHeight / alturaVista;
-      const vagas = LIMITES.map(([cima, baixo]) => {
-        const topo = cima.getBoundingClientRect().bottom;
-        const fundo = baixo.getBoundingClientRect().top;
-        const alvoPx = Math.min((fundo - topo) * 0.86, innerWidth * 0.78);
-        return { y: (topo + fundo) / 2, escala: Math.max(0.3, alvoPx / (2.5 * pxPorUnidade)) };
-      });
-      let n = 0;
-      while (n < 1 && secoesCena[n + 1].getBoundingClientRect().top <= 0) n++;
-      const f = suave(Math.max(0, Math.min(1, 1 - secoesCena[n + 1].getBoundingClientRect().top / innerHeight)));
-      const yTela = mix(vagas[n].y, vagas[n + 1].y, f);
-      const escalaVaga = mix(vagas[n].escala, vagas[n + 1].escala, f);
+      const alvoPx = Math.min(innerWidth * 0.72, innerHeight * 0.42);
+      const escala = alvoPx / (2.5 * pxPorUnidade);
       const copia = copias[0];
-      copia.position.set(0, (0.5 - yTela / innerHeight) * alturaVista + Math.sin(t * 1.2) * 0.06 * mov, 0);
+      copia.position.set(0, -0.04 * alturaVista + Math.sin(t * 1.2) * 0.06 * mov, 0);
       const malhaCopia = copia.children[0];
-      malhaCopia.rotation.set(Math.sin(t * 0.8) * 0.06 * mov, f * Math.PI * 2 + Math.sin(t * 0.6) * 0.12 * mov, 0);
-      malhaCopia.scale.setScalar((1 + Math.sin(t * 2.2) * 0.035 * mov) * escalaVaga);
+      malhaCopia.rotation.set(Math.sin(t * 0.8) * 0.06 * mov, p * Math.PI + Math.sin(t * 0.6) * 0.12 * mov, 0);
+      malhaCopia.scale.setScalar((1 + Math.sin(t * 2.2) * 0.035 * mov) * escala);
     } else {
       const desvio = e.olharX;
       camera.position.set(desvio + mouse.sx * 0.25 * mov, e.camY - mouse.sy * 0.1 * mov, e.camZ);
