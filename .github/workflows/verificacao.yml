@@ -1,0 +1,49 @@
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 9 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  projeto:
+    name: Instala, compila e audita
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+      - name: Instalar dependências
+        run: pip install -r requirements.txt pip-audit
+      - name: Compilar o Python
+        run: python -m compileall -q app.py servidor
+      - name: Importar o app
+        env:
+          GROQ_API_KEY: chave-falsa-para-teste
+        run: python -c "import app"
+      - name: Procurar vulnerabilidades nas dependências
+        run: pip-audit -r requirements.txt
+
+  codeql:
+    name: Análise de segurança (CodeQL)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        linguagem: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.linguagem }}
+      - uses: github/codeql-action/analyze@v3
