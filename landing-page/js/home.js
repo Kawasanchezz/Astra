@@ -381,12 +381,20 @@ function iniciarRobo() {
   let visivel = true;
   new IntersectionObserver(([en]) => { visivel = en.isIntersecting; }).observe(canvas);
   const relogio = new THREE.Clock();
+  let anterior = 0, lentos = 0, amostras = 0, densidade = renderer.getPixelRatio();
   function quadro(agora) {
     requestAnimationFrame(quadro);
-    if (!visivel || document.hidden) return;
+    if (!visivel || document.hidden) { anterior = 0; return; }
+    const dt = anterior ? Math.min(0.1, (agora - anterior) / 1000) : 1 / 60;
+    anterior = agora;
+    if (celular && densidade > 1 && amostras < 240) {
+      amostras++;
+      if (dt > 0.024) lentos++;
+      if (amostras === 90 && lentos > 25) { densidade = 1; renderer.setPixelRatio(1); renderer.setSize(largura(), altura(), false); }
+    }
     const t = relogio.getElapsedTime();
     const alvo = Math.min(2, Math.max(0, scrollY / innerHeight));
-    p += (alvo - p) * (reduzir ? 1 : 0.08);
+    p += (alvo - p) * (reduzir ? 1 : 1 - Math.pow(0.92, dt * 60));
     mouse.sx += (mouse.x - mouse.sx) * 0.06;
     mouse.sy += (mouse.y - mouse.sy) * 0.06;
 
