@@ -273,7 +273,9 @@ if (renderer) iniciarRobo();
 function iniciarRobo() {
   const celular = innerWidth < 900;
   const largura = () => innerWidth;
-  const altura = () => (celular && canvas.clientHeight) || innerHeight;
+  let alturaCena = 0;
+  const medirAltura = () => (alturaCena = (celular && canvas.clientHeight) || innerHeight);
+  const altura = () => alturaCena || medirAltura();
   const VAGAS = [0.46, 0.47, 0.56];
   matchMedia('(max-width: 899px)').addEventListener('change', () => location.reload());
   renderer.setPixelRatio(Math.min(devicePixelRatio, celular ? 1.5 : 2));
@@ -370,6 +372,7 @@ function iniciarRobo() {
   function ajustar() {
     if (celular && innerWidth === ultimaLargura) return;
     ultimaLargura = innerWidth;
+    medirAltura();
     renderer.setSize(largura(), altura(), false);
     camera.aspect = largura() / altura();
     camera.updateProjectionMatrix();
