@@ -13,7 +13,7 @@ flask-limiter>=4.1.1,<5  # 4.x e a linha suportada (3.8.0 estava 2 majors atras)
 werkzeug>=3.0.6,<4       # >=3.0.6 corrige CVE-2024-49766/49767
 
 # --- Inteligência Artificial ---
-groq>=1.6.0,<2           # API usada aqui (Groq(api_key=...) + chat.completions.create)
+groq>=1.7.0,<2           # API usada aqui (Groq(api_key=...) + chat.completions.create)
 
 # --- Configurações e Ambiente ---
 python-dotenv>=1.2.2,<2  # >=1.2.2 corrige CVE-2026-28684 (set_key/unset_key seguem symlink)
