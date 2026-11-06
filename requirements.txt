@@ -16,7 +16,7 @@ werkzeug>=3.0.6,<4       # >=3.0.6 corrige CVE-2024-49766/49767
 groq>=1.6.0,<2           # API usada aqui (Groq(api_key=...) + chat.completions.create)
 
 # --- Configurações e Ambiente ---
-python-dotenv>=1.2.2,<2  # >=1.2.2 corrige CVE-2026-28684 (set_key/unset_key seguem symlink)
+python-dotenv>=1.2.4,<2  # >=1.2.2 corrige CVE-2026-28684 (set_key/unset_key seguem symlink)
 
 # --- Servidor de Produção ---
 # O gunicorn depende de fcntl, que so existe em Unix: ele instala no Windows
