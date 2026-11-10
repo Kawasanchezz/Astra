@@ -1,0 +1,3 @@
+name: Configuração do CodeQL
+paths-ignore:
+  - landing-page/js/vendor

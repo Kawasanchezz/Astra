@@ -4,6 +4,7 @@ import mimetypes
 import signal
 import sys
 import threading
+from urllib.parse import urlsplit
 from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -47,7 +48,7 @@ if TRUSTED_PROXY_COUNT > 0:
         x_host=TRUSTED_PROXY_COUNT,
         x_prefix=TRUSTED_PROXY_COUNT,
     )
-    logger.info("ProxyFix ativo: confiando em %d proxy(s).", TRUSTED_PROXY_COUNT)
+    logger.info("ProxyFix ativo: X-Forwarded-* confiado.")
 else:
     logger.info("ProxyFix desativado: X-Forwarded-* ignorado (IP real do socket).")
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_SIZE
@@ -66,11 +67,13 @@ system_prompt = PromptMestre().get_prompt()
 
 _vagas_ia = threading.BoundedSemaphore(MAX_CONCURRENT_REQUESTS)
 
+_HOSTS_PERMITIDOS = [urlsplit(o).netloc for o in ALLOWED_ORIGINS if urlsplit(o).netloc] or ["localhost:5000"]
+
 @app.before_request
 def enforce_https():
     if FORCE_HTTPS and not request.is_secure:
-        url = request.url.replace("http://", "https://", 1)
-        return redirect(url, code=301)
+        host = next((h for h in _HOSTS_PERMITIDOS if h == request.host), _HOSTS_PERMITIDOS[0])
+        return redirect(f"https://{host}{request.full_path.rstrip('?')}", code=301)
 
 _EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
                          ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",

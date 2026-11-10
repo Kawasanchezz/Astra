@@ -88,14 +88,14 @@ def normalizar(texto: str) -> str:
 _BLOCO_CODIGO = re.compile(r"```.*?(?:```|\Z)", re.DOTALL)
 _CODIGO_INLINE = re.compile(r"`[^`\n]*`")
 _TRECHO_CITADO = re.compile(r'"[^"\n]{12,}"|“[^”\n]{12,}”|«[^»\n]{12,}»')
-_LINHA_COMENTARIO = re.compile(r"^\s*(?:#|//|--|/\*|\*|<!--).*$", re.MULTILINE)
+_PREFIXOS_COMENTARIO = ("#", "//", "--", "/*", "*", "<!--")
 
 def _sem_codigo(texto: str) -> str:
     """O que a pessoa escreveu FORA de código, comentários e trechos citados."""
     t = _BLOCO_CODIGO.sub(" ", texto)
     t = _CODIGO_INLINE.sub(" ", t)
     t = _TRECHO_CITADO.sub(" ", t)
-    return _LINHA_COMENTARIO.sub(" ", t)
+    return "\n".join(" " if l.lstrip().startswith(_PREFIXOS_COMENTARIO) else l for l in t.split("\n"))
 
 def _decodificar_base64(texto: str) -> list[str]:
     """Textos legíveis escondidos em Base64 (o formato não muda o conteúdo)."""
