@@ -73,7 +73,11 @@ _HOSTS_PERMITIDOS = [urlsplit(o).netloc for o in ALLOWED_ORIGINS if urlsplit(o).
 def enforce_https():
     if FORCE_HTTPS and not request.is_secure:
         host = next((h for h in _HOSTS_PERMITIDOS if h == request.host), _HOSTS_PERMITIDOS[0])
-        return redirect(f"https://{host}{request.full_path.rstrip('?')}", code=301)
+        caminho = request.full_path.rstrip("?").replace("\\", "")
+        partes = urlsplit(caminho)
+        if partes.netloc == "" and partes.scheme == "" and caminho.startswith("/") and not caminho.startswith("//"):
+            return redirect(f"https://{host}{caminho}", code=301)
+        return redirect(f"https://{host}/", code=301)
 
 _EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
                          ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",
