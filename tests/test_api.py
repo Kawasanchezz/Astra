@@ -34,8 +34,6 @@ def _app(indice, llm=None, **opcoes):
 def _ask(app, corpo=None, **kwargs):
     return app.test_client().post("/ask", json=corpo, **kwargs)
 
-# ---------- /health ----------
-
 def test_health_ok_com_indice(indice):
     resposta = _app(indice).test_client().get("/health")
     assert resposta.status_code == 200
@@ -46,8 +44,6 @@ def test_health_ok_com_indice(indice):
 def test_health_responde_503_sem_indice():
     resposta = _app(None).test_client().get("/health")
     assert resposta.status_code == 503 and resposta.get_json()["status"] == "indice_indisponivel"
-
-# ---------- /ask: caminho feliz ----------
 
 def test_ask_devolve_resposta_fontes_e_id(indice):
     llm = LlmEspiao()
@@ -76,8 +72,6 @@ def test_request_id_do_cliente_e_reaproveitado_so_se_for_seguro(indice):
     forjado = 'a"} {"nivel": "ERROR"}'
     suspeito = _ask(app, {"pergunta": PERGUNTA_SQL}, headers={"X-Request-ID": forjado})
     assert suspeito.headers["X-Request-ID"] != forjado and len(suspeito.headers["X-Request-ID"]) == 16
-
-# ---------- /ask: validação ----------
 
 @pytest.mark.parametrize("corpo, status, codigo", [
     ({}, 400, "pergunta_invalida"),
@@ -118,8 +112,6 @@ def test_ask_sem_indice_devolve_503(indice):
     resposta = _ask(_app(None), {"pergunta": PERGUNTA_SQL})
     assert resposta.status_code == 503 and resposta.get_json()["erro"]["codigo"] == "indice_indisponivel"
 
-# ---------- /ask: falhas do LLM ----------
-
 def test_erro_do_llm_vira_502_sem_vazar_detalhe_interno(indice):
     def llm_quebrado(_):
         raise RuntimeError("chave gsk_SEGREDO-INTERNO invalida")
@@ -151,8 +143,6 @@ def test_falha_fora_do_llm_vira_500_generico(indice):
     resposta = _ask(app, {"pergunta": PERGUNTA_SQL})
     assert resposta.status_code == 500 and "detalhe-interno" not in resposta.get_data(as_text=True)
 
-# ---------- autenticação entre serviços ----------
-
 def test_com_token_configurado_o_ask_exige_bearer_e_o_health_continua_publico(indice):
     app = _app(indice, token="segredo-de-teste")
     cliente = app.test_client()
@@ -161,8 +151,6 @@ def test_com_token_configurado_o_ask_exige_bearer_e_o_health_continua_publico(in
     assert cliente.post("/ask", json=corpo, headers={"Authorization": "Bearer errado"}).status_code == 401
     assert cliente.post("/ask", json=corpo, headers={"Authorization": "Bearer segredo-de-teste"}).status_code == 200
     assert cliente.get("/health").status_code == 200
-
-# ---------- logs estruturados ----------
 
 def test_log_de_requisicao_e_estruturado_e_nao_guarda_a_pergunta(indice, caplog):
     pergunta = "pergunta-confidencial sobre inner join entre tabelas"

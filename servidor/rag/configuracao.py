@@ -30,8 +30,6 @@ MODELO_EMBEDDING = os.environ.get(
     "RAG_MODELO_EMBEDDING", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
 
-# Este modelo corta o texto em ~128 tokens (cerca de 450 caracteres em português),
-# então trechos maiores perderiam o final no embedding.
 TAMANHO_TRECHO = _env_int("RAG_TAMANHO_TRECHO", 450)
 SOBREPOSICAO = _env_int("RAG_SOBREPOSICAO", 80)
 
@@ -43,5 +41,4 @@ API_PORT = _env_int("RAG_API_PORT", 8000)
 API_MAX_PERGUNTA = _env_int("RAG_API_MAX_PERGUNTA", 500)
 API_MAX_CORPO = _env_int("RAG_API_MAX_CORPO", 4096)
 API_TIMEOUT_LLM = _env_float("RAG_API_TIMEOUT_LLM", 25.0)
-# Se definido, /ask exige "Authorization: Bearer <token>" (chamada entre serviços).
 API_TOKEN = os.environ.get("RAG_API_TOKEN") or None

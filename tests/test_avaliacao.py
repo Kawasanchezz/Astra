@@ -26,8 +26,6 @@ def _avaliar(item, ambiente, llm):
 JOIN = Pergunta("a", "o que faz o inner join entre tabelas", "x", "sql.md", [["correspond"]])
 FORA = Pergunta("b", "receita de bolo de cenoura", "recusar", None, [])
 
-# ---------- perguntas do repositório ----------
-
 def test_arquivo_de_perguntas_esta_integro():
     perguntas = carregar_perguntas(RAIZ / "avaliacao" / "perguntas.json")
     assert len(perguntas) == 10
@@ -36,8 +34,6 @@ def test_arquivo_de_perguntas_esta_integro():
     existentes = {f.name for f in (RAIZ / "docs" / "estudo").glob("*.md")}
     assert all(p.fonte in existentes for p in perguntas if p.deve_responder)
     assert all(p.termos for p in perguntas if p.deve_responder)
-
-# ---------- helpers ----------
 
 def test_eh_recusa_reconhece_as_duas_recusas_e_nao_confunde_resposta_normal():
     assert eh_recusa("Não sei com base nos documentos fornecidos.")
@@ -50,8 +46,6 @@ def test_contem_termos_ignora_acento_e_caixa_e_exige_todos_os_grupos():
     assert contem_termos(texto, [["atomicidade"], ["rollback", "desfaz"]])
     assert not contem_termos(texto, [["atomicidade"], ["isolamento"]])
     assert contem_termos("Imutável", [["imutavel"]])
-
-# ---------- avaliação ----------
 
 def test_aprova_quando_cita_o_trecho_do_documento_certo(ambiente):
     r = _avaliar(JOIN, ambiente, lambda m: "Devolve as linhas com correspondência [1].")

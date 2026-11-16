@@ -32,8 +32,6 @@ def pasta_docs(tmp_path):
     (tmp_path / "git.md").write_text(DOC_GIT, encoding="utf-8")
     return tmp_path
 
-# ---------- chunking ----------
-
 def test_divide_por_secao_e_guarda_o_caminho_do_titulo():
     md = "# Banco\n\n## ACID\n\nAtomicidade é tudo ou nada.\n\n## Índices\n\nAcelera consultas.\n"
     trechos = dividir_markdown(md, "banco.md")
@@ -76,8 +74,6 @@ def test_secao_entra_no_texto_do_embedding():
     assert Trecho("a.md", "SQL > Joins", "texto").texto_para_embedding == "SQL > Joins\ntexto"
     assert Trecho("a.md", "", "texto").texto_para_embedding == "texto"
 
-# ---------- índice ----------
-
 def test_busca_traz_o_trecho_certo_primeiro(pasta_docs):
     embedder = EmbedderFalso()
     indice = indexar_pasta(pasta_docs, embedder)
@@ -108,8 +104,6 @@ def test_carregar_com_outro_modelo_exige_reindexar(pasta_docs, tmp_path):
 def test_indexar_pasta_sem_documentos_falha_com_mensagem_clara(tmp_path):
     with pytest.raises(ValueError, match="nenhum trecho"):
         indexar_pasta(tmp_path, EmbedderFalso())
-
-# ---------- consulta ----------
 
 def test_score_minimo_descarta_trechos_sem_relacao(pasta_docs):
     embedder = EmbedderFalso()
@@ -155,14 +149,12 @@ def test_sem_contexto_relevante_nao_chama_o_llm(pasta_docs):
     resposta = perguntar("receita de bolo de cenoura", indice, embedder, llm_proibido, score_minimo=0.3)
     assert resposta.texto == SEM_CONTEXTO and not resposta.usou_llm and resposta.fontes == []
 
-# ---------- prompts em arquivos ----------
-
 def _pasta_prompts(tmp_path, **alteracoes):
     textos = {"sistema.md": "sis", "regra-contexto.md": "regra", "formato.md": "fmt",
               "contexto.md": "C: $contexto | P: $pergunta"}
     textos.update(alteracoes)
     for nome, texto in textos.items():
-        (tmp_path / nome).write_bytes(texto.encode("utf-8"))   # bytes exatos: write_text trocaria \n por \r\n no Windows
+        (tmp_path / nome).write_bytes(texto.encode("utf-8"))
     return tmp_path
 
 def test_carrega_os_arquivos_e_compoe_a_mensagem_de_sistema(tmp_path):
@@ -205,8 +197,6 @@ def test_resposta_registra_a_versao_dos_prompts(pasta_docs):
     indice = indexar_pasta(pasta_docs, embedder)
     resposta = perguntar("inner join", indice, embedder, lambda m: "ok", score_minimo=0.3)
     assert resposta.versao_prompt == prompts_padrao().versao
-
-# ---------- modelo real (opcional: baixa ~220 MB na primeira vez) ----------
 
 @pytest.mark.skipif(os.environ.get("RAG_TESTES_REAIS") != "1", reason="defina RAG_TESTES_REAIS=1")
 def test_modelo_real_encontra_o_documento_certo():
