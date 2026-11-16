@@ -258,3 +258,21 @@ class TestLimitesDaApiDoRag:
         with pytest.raises(OSError):
             llm.llm_groq([{"role": "user", "content": "oi"}])
         assert orcamento.usado == 0
+
+
+class TestOrcamentoEmProducao:
+    @pytest.mark.parametrize("limite", [0, -5])
+    def test_producao_sem_teto_diario_nao_sobe(self, monkeypatch, limite):
+        import config
+
+        monkeypatch.setattr(config, "IS_PRODUCTION", True)
+        monkeypatch.setattr(config, "ORCAMENTO_DIARIO_TOKENS", limite)
+        with pytest.raises(ValueError, match="ORCAMENTO_DIARIO_TOKENS"):
+            config.validar_configuracao()
+
+    def test_producao_com_teto_positivo_sobe(self, monkeypatch):
+        import config
+
+        monkeypatch.setattr(config, "IS_PRODUCTION", True)
+        monkeypatch.setattr(config, "ORCAMENTO_DIARIO_TOKENS", 1000)
+        config.validar_configuracao()

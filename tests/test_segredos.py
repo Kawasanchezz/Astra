@@ -181,3 +181,19 @@ class TestChaveNaoChegaAoNavegador:
         resposta = main.app.test_client().get(caminho)
         assert resposta.status_code in (400, 404)
         assert CHAVE_FALSA not in resposta.get_data(as_text=True)
+
+
+def test_api_rag_recusa_subir_em_producao_sem_token():
+    from rag.configuracao import validar_token_api
+
+    with pytest.raises(RuntimeError, match="RAG_API_TOKEN"):
+        validar_token_api("", True)
+    with pytest.raises(RuntimeError, match="RAG_API_TOKEN"):
+        validar_token_api(None, True)
+
+
+def test_api_rag_aceita_sem_token_so_em_desenvolvimento_e_com_token_em_producao():
+    from rag.configuracao import validar_token_api
+
+    validar_token_api("", False)
+    validar_token_api("token-de-teste-com-tamanho-suficiente", True)

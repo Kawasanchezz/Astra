@@ -128,6 +128,9 @@ def validar_configuracao():
                        "Defina TRUSTED_PROXY_COUNT=1 (ou o numero real de proxies).")
 
     if IS_PRODUCTION:
+        if ORCAMENTO_DIARIO_TOKENS <= 0:
+            raise ValueError("ORCAMENTO_DIARIO_TOKENS deve ser maior que 0 em producao: sem teto diario "
+                             "o custo da Groq nao tem limite.")
         if any(("localhost" in o or "127.0.0.1" in o) for o in ALLOWED_ORIGINS):
             logger.warning("ALLOWED_ORIGINS ainda aponta para localhost em producao. "
                            "Configure o dominio real (ex.: https://seu-dominio.com).")

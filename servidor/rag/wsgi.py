@@ -1,15 +1,17 @@
 """Entrada de produção: gunicorn --workers 1 --threads 4 rag.wsgi:app (dentro de servidor/)."""
 import logging
+import os
 
 from rag.api import Limites, criar_app
 from rag.configuracao import (API_LIMITE, API_MAX_CORPO, API_MAX_PERGUNTA, API_TIMEOUT_LLM, API_TOKEN,
-                              INDEX_DIR, MODELO_EMBEDDING)
+                              INDEX_DIR, MODELO_EMBEDDING, validar_token_api)
 from rag.embeddings import FastEmbedEmbedder
 from rag.indice import IndiceVetorial
 from rag.llm import llm_groq
 from rag.logs import configurar_logs
 
 def criar_app_padrao():
+    validar_token_api(API_TOKEN, os.environ.get("APP_ENV", "").strip().lower() == "production")
     configurar_logs()
     logger = logging.getLogger("rag.api")
     embedder = FastEmbedEmbedder()

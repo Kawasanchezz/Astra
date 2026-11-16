@@ -43,3 +43,8 @@ API_MAX_CORPO = _env_int("RAG_API_MAX_CORPO", 4096)
 API_TIMEOUT_LLM = _env_float("RAG_API_TIMEOUT_LLM", 25.0)
 API_LIMITE = os.environ.get("RAG_API_LIMITE", "60 per minute")
 API_TOKEN = os.environ.get("RAG_API_TOKEN") or None
+
+def validar_token_api(token, producao: bool) -> None:
+    """Sem token, o /ask fica aberto. Em produção isso não pode acontecer: o serviço não sobe."""
+    if producao and not token:
+        raise RuntimeError("RAG_API_TOKEN é obrigatório em produção: sem ele o /ask ficaria sem autenticação.")

@@ -55,10 +55,17 @@ def pagina():
     api = pytest.importorskip("playwright.sync_api")
     main.limiter.reset()
     with api.sync_playwright() as p:
-        try:
-            navegador = p.chromium.launch(channel="chrome", headless=True)
-        except api.Error:
-            pytest.skip("Chrome não está disponível para o Playwright")
+        navegador = None
+        for opcoes in ({"channel": "chrome"}, {}):
+            try:
+                navegador = p.chromium.launch(headless=True, **opcoes)
+                break
+            except Exception:
+                continue
+        if navegador is None:
+            if os.environ.get("CI"):
+                pytest.fail("Nenhum navegador disponível no CI: os testes de XSS e CSP não podem ser pulados")
+            pytest.skip("Nenhum navegador disponível para o Playwright (rode: playwright install chromium)")
         contexto = navegador.new_context(viewport={"width": 1280, "height": 760})
         contexto.add_init_script("localStorage.setItem('astra_idioma','pt-BR');")
         yield contexto.new_page()
@@ -73,6 +80,8 @@ def recarregar(monkeypatch):
     import main
 
     def aplicar(**ambiente):
+        if ambiente.get("APP_ENV") == "production":
+            ambiente.setdefault("ORCAMENTO_DIARIO_TOKENS", "1000000")
         for nome, valor in ambiente.items():
             monkeypatch.setenv(nome, valor)
         importlib.reload(config)
