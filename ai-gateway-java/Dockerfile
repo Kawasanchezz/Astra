@@ -5,7 +5,7 @@ RUN mvn -B -q dependency:go-offline
 COPY src src
 RUN mvn -B -q -DskipTests package
 
-FROM eclipse-temurin:21-jre@sha256:18bb4a91a3dea3f03ee31d3755af34dfb40f904fc77ab56cdc2f092e32fff9c2
+FROM eclipse-temurin:25-jre@sha256:a640968ae55027b322cedd5f8228b01a84baff0b9e9360e47601c6a111ba1699
 RUN useradd --system --uid 10001 --no-create-home app
 WORKDIR /app
 COPY --from=build /app/target/ai-gateway.jar app.jar
