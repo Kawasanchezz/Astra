@@ -20,7 +20,7 @@ def _env_float(nome: str, padrao: float) -> float:
     except (TypeError, ValueError):
         return padrao
 
-DOCS_DIR = Path(os.environ.get("RAG_DOCS_DIR", RAIZ / "docs"))
+DOCS_DIR = Path(os.environ.get("RAG_DOCS_DIR", RAIZ / "docs" / "estudo"))
 INDEX_DIR = Path(os.environ.get("RAG_INDEX_DIR", RAIZ / ".cache" / "rag-index"))
 MODELO_CACHE_DIR = Path(os.environ.get("RAG_MODELO_CACHE_DIR", RAIZ / ".cache" / "fastembed"))
 
