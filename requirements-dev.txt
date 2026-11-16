@@ -8,4 +8,4 @@ playwright>=1.49,<2       # testes de XSS/CSP no navegador (playwright install c
 ruff>=0.8,<1              # lint
 mypy>=1.13,<3             # tipos
 bandit>=1.8,<2            # análise estática de segurança
-pip-audit>=2.7,<3         # CVEs nas dependências
+pip-audit>=2.10.1,<3         # CVEs nas dependências
