@@ -298,7 +298,7 @@ Testes de abuso, por arquivo: `tests/test_abuso.py` (entradas extremas, requisi�
 - **Sem sessão nem login**: por isso não há CSRF a mitigar. Se isso mudar, será preciso token CSRF e revisão de autorização.
 - **Cabeçalho `Server`** não pode ser removido sob gunicorn/Vercel. O log de acesso do servidor WSGI fica fora do filtro de segredos.
 - **Dependências:** o `requirements.txt` da Vercel usa faixas (piso e teto), não versões exatas; o lock com hashes vale só para a imagem do RAG e é regenerado à mão. O CI roda pip-audit, bandit, lint, tipos, testes (Python e Java) e Trivy nas duas imagens.
-- **Spring Framework 6.2.19 no gateway (CRÍTICO, aberto):** `CVE-2026-47884` e `CVE-2026-47890` só têm correção na linha 7.0.9, que exige Spring Boot 4. O código não usa XSLT, SSE nem `View`, mas o componente continua na imagem e o job `imagens` do CI fica vermelho até a migração ou uma aceitação de risco documentada.
+- **Spring Framework 6.2.19 no gateway (CRÍTICO): resolvido** na migração para Spring Boot 4.1.2 (Spring Framework 7.0.10). Ver a seção de veredito.
 - **bandit:** 6 achados Low em `servidor/servidor_seguro.py`, lançador só de Windows (risco aceito).
 - **Chave exposta:** a chave Groq de `servidor/.env` apareceu sem máscara numa transcrição local; deve ser revogada e rotacionada no painel da Groq (não é algo que o código resolve).
 - Nada disso foi testado contra um ambiente de produção real (Vercel, proxy TLS); a verificação ao vivo foi local.
@@ -324,14 +324,14 @@ Este projeto **não mantém programa de recompensa financeira (bug bounty)**; o 
 
 ### Veredito da auditoria (E9)
 
-**Não aprovada.** Um critério da auditoria não está cumprido: "nenhuma vulnerabilidade crítica conhecida permanece sem tratamento" (Spring Framework 6.2.19, ver acima). Os demais critérios têm evidência na tabela abaixo. Isso não significa que o sistema seja invulnerável.
+**Aprovada com ressalvas.** Todos os critérios têm evidência, exceto dois itens que dependem de ações fora do código: a revogação da chave antiga da Groq (ação sua no painel da Groq) e a confirmação de que o CI do GitHub está verde nesta versão (não consigo ler o log remoto). Isso não significa que o sistema seja invulnerável.
 
 | Critério | Situação | Evidência |
 | --- | --- | --- |
 | Testes obrigatórios passam | Cumprido | `pytest -q`: 433 passed, 1 skipped, 5 xfailed. Os 5 xfailed são variantes de injeção conhecidas, não testes desabilitados |
 | Nenhum teste desabilitado | Cumprido | Nenhum `skip` novo para esconder falha. O fixture de navegador passou a falhar no CI em vez de pular |
 | Nenhuma chave ativa exposta no código ou histórico | Cumprido no código; **pendente no painel** | `gitleaks git`: no leaks found. A chave antiga precisa ser revogada pelo mantenedor |
-| Nenhuma vulnerabilidade crítica ou alta sem tratamento | **Não cumprido** | Spring Framework 6.2.19 (crítica, aberta). Tomcat, Jackson, zlib e pip da imagem foram tratados |
+| Nenhuma vulnerabilidade crítica ou alta sem tratamento | Cumprido | Trivy nas duas imagens: 0 achados CRITICAL/HIGH com correção disponível. Spring Framework 6.2.19 resolvido na migração para Spring Boot 4 |
 | Nenhum problema conhecido de isolamento entre usuários | Cumprido com ressalva | Conversas do front isoladas por chat (E2). Contadores são por processo (ver riscos) |
 | Nenhum problema crítico de consumo sem mitigação | Parcial | Teto diário e limites por IP existem e são barrados em produção sem teto (E4). Contadores não são globais entre instâncias |
 | Nenhuma falha de XSS conhecida | Cumprido | 22 testes de XSS no navegador passam (`test_saida_front.py`) |
@@ -347,8 +347,8 @@ Este projeto **não mantém programa de recompensa financeira (bug bounty)**; o 
 - `pip-audit -r requirements.txt` e `pip-audit -r requirements-rag.lock --no-deps --disable-pip`: No known vulnerabilities found.
 - `gitleaks git`: no leaks found.
 - Trivy, imagem RAG: sem achados CRITICAL/HIGH com correção disponível.
-- Trivy, imagem do gateway: 2 CRITICAL (`spring-webmvc` 6.2.19).
-- Java: `mvn test`, 35 testes, BUILD SUCCESS.
+- Trivy, imagem do gateway (Spring Boot 4.1.2): `app/app.jar` com 0 vulnerabilidades; base Ubuntu com 0.
+- Java (Spring Boot 4.1.2): `mvn test`, 35 testes, BUILD SUCCESS. Gateway em container: `/actuator/health` UP, `/v3/api-docs` 200.
 - Linux com `CI=true` e Chromium: 433 passed, 1 skipped, 5 xfailed.
 - Ao vivo (servidor local, sem chamadas à Groq): corpo de 5 MB → 413; JSON com 5000 níveis → 400; tipos errados → 400; rajada além do limite → 429 a partir da 6ª requisição; cabeçalhos presentes; 404 e 405 em JSON; nenhum `gsk_` nem `Traceback` no log.
 
