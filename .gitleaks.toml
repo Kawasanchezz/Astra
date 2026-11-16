@@ -3,7 +3,7 @@ title = "Astra"
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Dependências, caches e bibliotecas de terceiros minificadas"
 paths = [
     '''(^|/)\.venv/''',
@@ -11,4 +11,17 @@ paths = [
     '''(^|/)promo/''',
     '''(^|/)target/''',
     '''landing-page/js/vendor/''',
+]
+
+[[allowlists]]
+description = "Valores falsos usados como fixture nos testes do filtro de segredos e de injecao"
+regexes = [
+    '''valor-secreto-do-ambiente-123''',
+    '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.abcdefghijk123''',
+]
+
+[[allowlists]]
+description = "Bytecode gerado localmente (nao versionado)"
+paths = [
+    '''__pycache__/''',
 ]

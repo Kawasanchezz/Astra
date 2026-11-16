@@ -18,6 +18,7 @@ A segurança deste projeto e dos dados de quem o utiliza é prioridade. Este doc
 - [Cabeçalhos de segurança](#cabeçalhos-de-segurança)
 - [Antes de cada deploy](#antes-de-cada-deploy)
 - [Como testar como um estranho](#como-testar-como-um-estranho)
+- [Auditoria de segurança (etapas E1–E9)](#auditoria-de-segurança-etapas-e1e9)
 - [Se o projeto ganhar backend, login ou formulário](#se-o-projeto-ganhar-backend-login-ou-formulário)
 - [Reconhecimento](#reconhecimento)
 
@@ -252,6 +253,54 @@ Se usar Google Fonts, acrescente `https://fonts.googleapis.com` em `style-src` e
 - Tente acessar rotas protegidas e dados de outro usuário sem login ou com outra conta: deve ser negado pelo servidor.
 - Verifique se erros não exibem stack trace nem caminhos internos.
 - Tente acessar `/.env`, `/.git/config` e arquivos de backup na URL publicada: deve retornar 404.
+
+## Auditoria de segurança (etapas E1–E9)
+
+Revisão feita sobre o próprio código, com correções e testes automatizados (o LLM é sempre simulado nos testes; nenhum teste chama a API real). **Isto não é uma garantia de que o sistema seja seguro**: é o registro do que foi corrigido, do que foi medido e do que continua em aberto.
+
+### O que foi corrigido
+
+| Área | Problema | Correção |
+| --- | --- | --- |
+| Entrada | Regex com custo quadratico (`_URL_COM_SENHA`) permitia DoS; JSON muito aninhado dava 500; mensagem só com caracteres invisíveis passava; 413 incorreto com texto multibyte; surrogates quebravam a chamada | Regex limitada, `RecursionError` vira 400, sanitização antes da checagem de vazio, limite de corpo calculado em bytes, remoção de surrogates |
+| Abuso | Sem teto de gasto, sem limite na API do RAG nem no gateway Java | Orçamento diário de tokens, limites por IP/dia/global, semáforo de concorrência, `RateLimitFilter` (30/min por IP) no gateway |
+| Erros da LLM | Falhas viravam 200 com texto de erro; timeout×retries podia passar do limite da Vercel | HTTP próprio por falha (400/429/502/503/504, `Retry-After`), prazo total derivado, resposta vazia vira 502 |
+| Injeção de prompt | Guarda com lacunas; trechos recuperados do RAG podiam forjar o delimitador | Guarda ampliada (66 testes originais mantidos), delimitador aleatório por requisição, prompt versionado |
+| Saída | DOMPurify permissivo (forms, img, svg, style); imagem markdown servia para exfiltrar dados | Configuração restrita, remoção de imagens fora de blocos de código, 22 testes de XSS no navegador |
+| Web | Cookie e `SECRET_KEY` sem validação, CORS sem validar origens, CSP incompleta, cabeçalho `Server` com versão, gateway Java sem cabeçalhos | `SECRET_KEY` forte exigida em produção, origens exatas, cookie `HttpOnly`/`SameSite`/`Secure`/`__Host-`, CSP e Permissions-Policy completas, `SecurityHeadersFilter` no Java |
+| Logs | Sem id de correlação no Flask; id do cliente aceitava `\n` (injeção de linha no log); segredo podia ir parar no log | `X-Request-ID` em toda resposta, `fullmatch` no id, filtro que mascara chave, token e e-mail; erros sem traceback nem caminho |
+| Dependências | Instalação sem versão nem hash na imagem; base Docker por tag; `pytest` na imagem; Dependabot só em pip; bandit B613 (caracteres bidi literais) | `requirements-rag.lock` com hashes e `--require-hashes`, bases por digest, `requirements-dev.txt`, Dependabot em pip/maven/docker/actions, escapes no lugar de literais invisíveis |
+| Segredos | Risco de commitar `servidor/.env` | `.gitignore`, `.dockerignore`, `.gitleaks.toml`, `.env.example` sem valores; histórico sem vazamentos |
+
+### Como repetir a validação
+
+```bash
+pip install -r requirements-dev.txt && playwright install chromium
+ruff check .                                   # lint
+mypy servidor                                  # tipos
+pytest -q                                      # ~420 testes (inclui abuso, injeção, XSS no navegador)
+bandit -r servidor app.py -ll                  # análise estática (0 High/Medium)
+pip-audit -r requirements.txt                  # CVEs
+pip-audit -r requirements-rag.lock --no-deps --disable-pip
+gitleaks git --config .gitleaks.toml           # histórico (gitleaks dir . também acusa o servidor/.env local, que não é versionado)
+cd ai-gateway-java && mvn test                 # 34 testes do gateway (ou via Docker, maven:3.9-eclipse-temurin-21)
+```
+
+Testes de abuso, por arquivo: `tests/test_abuso.py` (entradas extremas, requisições em massa, orçamento), `tests/test_injection.py` e `tests/test_seguranca.py` (injeção de prompt e vazamento do prompt de sistema), `tests/test_saida_front.py` (XSS no navegador), `tests/test_web.py` (cabeçalhos, cookies, CORS, erros), `tests/test_logs.py`, `tests/test_supply.py`.
+
+### Riscos que permanecem
+
+- **Injeção de prompt não é eliminável.** A guarda é heurística: 5 variantes conhecidas passam e estão marcadas como `xfail(strict=True)` (avó/roleplay, ROT13, chinês, "modo desenvolvedor", entre outras). Um atacante criativo pode contorná-la. O que limita o dano é a arquitetura (o modelo não tem ferramentas nem acesso a dados privados), não a guarda.
+- **Alucinação.** O modelo pode responder errado com confiança. No RAG, a última avaliação (`docs/avaliacao.md`) acertou a fonte em 7 de 8 casos esperados; trate respostas como apoio, não como fonte final.
+- **Detecção de vazamento do prompt** compara 8 palavras seguidas; paráfrase ou tradução passam. O prompt de sistema não contém segredos.
+- **Contadores em memória** (`memory://`): por processo, zerados a cada deploy e não compartilhados entre instâncias. Poucos IPs podem esgotar o limite global.
+- **O histórico da conversa vem do cliente** e pode ser forjado (o limite de tamanho e a guarda se aplicam a ele, mas o conteúdo não é confiável).
+- **Sem sessão nem login**: por isso não há CSRF a mitigar. Se isso mudar, será preciso token CSRF e revisão de autorização.
+- **Cabeçalho `Server`** não pode ser removido sob gunicorn/Vercel. O log de acesso do servidor WSGI fica fora do filtro de segredos.
+- **Dependências:** o `requirements.txt` da Vercel usa faixas (piso e teto), não versões exatas; o lock com hashes vale só para a imagem do RAG e é regenerado à mão. Não há scanner de CVEs das imagens Docker nem do Maven. O CI roda auditoria e bandit, mas não os testes.
+- **bandit:** 6 achados Low em `servidor/servidor_seguro.py`, lançador só de Windows (risco aceito).
+- **Chave exposta:** a chave Groq de `servidor/.env` apareceu sem máscara numa transcrição local; deve ser revogada e rotacionada no painel da Groq (não é algo que o código resolve).
+- Nada disso foi testado contra um ambiente de produção real (Vercel, proxy TLS); a verificação ao vivo foi local.
 
 ## Se o projeto ganhar backend, login ou formulário
 
