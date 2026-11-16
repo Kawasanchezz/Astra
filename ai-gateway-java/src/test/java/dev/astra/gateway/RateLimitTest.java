@@ -43,6 +43,8 @@ class RateLimitTest {
         pedir("10.1.0.1", null)
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string("Retry-After", "60"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
                 .andExpect(jsonPath("$.status").value(429))
                 .andExpect(jsonPath("$.idRequisicao").isNotEmpty());
