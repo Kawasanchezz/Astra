@@ -46,6 +46,7 @@ const AVISOS = {
 const aviso = () => AVISOS[(lsGet('astra_idioma', 'pt') || 'pt').slice(0, 2)] || AVISOS.pt;
 const MAX_PAYLOAD = 7500;
 const MAX_HISTORY_PAYLOAD = 10000;
+const PRAZO_RESPOSTA_MS = 40000;
 const MAX_FILE_BYTES = 200 * 1024;
 const MAX_FILE_CHARS = 7000;
 
@@ -293,9 +294,12 @@ async function send(presetText) {
     return;
   }
 
+  const controle = new AbortController();
+  const cancelarPorPrazo = setTimeout(() => controle.abort(), PRAZO_RESPOSTA_MS);
   try {
     const res = await fetch('/chat', {
       method: 'POST',
+      signal: controle.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mensagem: payload,
@@ -311,6 +315,7 @@ async function send(presetText) {
     hideThinking();
     addBotMsg(aviso().falha, true);
   } finally {
+    clearTimeout(cancelarPorPrazo);
     sending = false;
     els.send.disabled = false;
     scrollBottom();
