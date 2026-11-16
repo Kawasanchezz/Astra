@@ -38,6 +38,7 @@ def main(argv: list[str] | None = None) -> None:
         resposta = perguntar(args.pergunta, _carregar(), embedder, llm_groq, args.k, args.score_minimo)
         print(resposta.texto)
         print("\nFontes:", ", ".join(resposta.fontes) or "nenhuma")
+        print("Versão dos prompts:", resposta.versao_prompt)
 
 if __name__ == "__main__":
     main()

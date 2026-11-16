@@ -21,6 +21,7 @@ def _env_float(nome: str, padrao: float) -> float:
         return padrao
 
 DOCS_DIR = Path(os.environ.get("RAG_DOCS_DIR", RAIZ / "docs" / "estudo"))
+PROMPTS_DIR = Path(os.environ.get("RAG_PROMPTS_DIR", RAIZ / "prompts"))
 INDEX_DIR = Path(os.environ.get("RAG_INDEX_DIR", RAIZ / ".cache" / "rag-index"))
 MODELO_CACHE_DIR = Path(os.environ.get("RAG_MODELO_CACHE_DIR", RAIZ / ".cache" / "fastembed"))
 
