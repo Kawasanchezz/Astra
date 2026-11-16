@@ -9,7 +9,6 @@ astra:
   base-url: ${ASTRA_BASE_URL:http://localhost:8000}
   token: ${ASTRA_TOKEN:}
   timeout-conexao: 2s
-  # O Astra corta o LLM em 25 s; este prazo precisa ser maior para receber o erro dele.
   timeout-leitura: 30s
 
 resilience4j:
@@ -22,7 +21,6 @@ resilience4j:
         exponential-backoff-multiplier: 2
         retry-exceptions:
           - dev.astra.gateway.client.AstraFalhaTransitoriaException
-        # Circuito aberto não adianta repetir.
         ignore-exceptions:
           - io.github.resilience4j.circuitbreaker.CallNotPermittedException
   circuitbreaker:
@@ -37,7 +35,6 @@ resilience4j:
         automatic-transition-from-open-to-half-open-enabled: true
         record-exceptions:
           - dev.astra.gateway.client.AstraFalhaTransitoriaException
-        # Erro de quem chamou (4xx) não conta como falha do serviço.
         ignore-exceptions:
           - dev.astra.gateway.client.AstraRejeitouException
 

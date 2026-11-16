@@ -18,10 +18,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-/**
- * Chama o POST /ask do Astra. A ordem das anotações importa: o Retry fica por fora e o CircuitBreaker por
- * dentro, então cada tentativa conta para o circuito e, com o circuito aberto, o retry nem insiste.
- */
 @Component
 public class AstraClient {
 
@@ -57,7 +53,6 @@ public class AstraClient {
         }
     }
 
-    /** Só estouro de leitura é 504. Não conseguir conectar é indisponibilidade (503), não demora. */
     private static boolean houveTimeout(Throwable erro) {
         for (Throwable t = erro; t != null; t = t.getCause()) {
             if (t instanceof HttpConnectTimeoutException) {

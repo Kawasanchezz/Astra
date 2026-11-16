@@ -1,6 +1,5 @@
 package dev.astra.gateway.client;
 
-/** O Astra respondeu 4xx. Repetir a mesma chamada daria o mesmo erro, então não há retry. */
 public class AstraRejeitouException extends RuntimeException {
 
     private final int statusAstra;

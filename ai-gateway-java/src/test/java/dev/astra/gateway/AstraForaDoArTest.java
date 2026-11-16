@@ -11,7 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-/** Nada escuta na porta 1: o Astra está fora do ar, e o gateway precisa responder 503 (indisponível), não 504 (demorou). */
 @SpringBootTest(properties = {
         "astra.base-url=http://127.0.0.1:1",
         "astra.timeout-conexao=1s",

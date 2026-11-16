@@ -13,7 +13,6 @@ COPY servidor servidor
 COPY docs docs
 COPY prompts prompts
 
-# O modelo de embeddings (~220 MB) e o índice entram na imagem: o contêiner sobe sem baixar nada.
 WORKDIR /app/servidor
 RUN python -m rag indexar
 

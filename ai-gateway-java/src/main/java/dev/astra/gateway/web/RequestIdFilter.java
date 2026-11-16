@@ -15,10 +15,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Garante um X-Request-ID em toda requisição: reaproveita o do cliente só se tiver formato seguro (evita
- * forjar linhas de log) e gera um novo caso contrário. Vai para o MDC, para a resposta e para o Astra.
- */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {

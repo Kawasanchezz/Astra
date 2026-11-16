@@ -78,10 +78,6 @@ class PerguntaControllerTest {
     @Autowired
     CircuitBreakerRegistry circuitos;
 
-    /**
-     * A primeira chamada HTTP da JVM (WireMock, cliente do JDK, Jackson) é lenta, sobretudo em CPU limitada, e
-     * estouraria o prazo de leitura de 1 s do primeiro teste. Esta chamada de aquecimento ignora o resultado.
-     */
     @BeforeAll
     static void aquecer() throws Exception {
         astra.stubFor(post(urlEqualTo("/ask")).willReturn(okJson(RESPOSTA_ASTRA)));
@@ -111,8 +107,6 @@ class PerguntaControllerTest {
     private static int chamadasAoAstra() {
         return astra.findAll(postRequestedFor(urlEqualTo("/ask"))).size();
     }
-
-    // ---------- caminho feliz ----------
 
     @Test
     void devolveARespostaMapeandoOsCamposDoAstra() throws Exception {
@@ -168,8 +162,6 @@ class PerguntaControllerTest {
         assertThat(recebido).isNotEqualTo(forjado).hasSize(16).matches("[0-9a-f]{16}");
     }
 
-    // ---------- validação (não chega ao Astra) ----------
-
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', value = {
             "pergunta em branco|{\"pergunta\":\"   \"}|pergunta",
@@ -204,8 +196,6 @@ class PerguntaControllerTest {
                 .andExpect(jsonPath("$.idRequisicao").isNotEmpty());
         assertThat(chamadasAoAstra()).isZero();
     }
-
-    // ---------- retry ----------
 
     @Test
     void repeteQuandoOAstraFalhaUmaVezEDepoisResponde() throws Exception {
@@ -252,8 +242,6 @@ class PerguntaControllerTest {
         assertThat(chamadasAoAstra()).isEqualTo(1);
     }
 
-    // ---------- timeout ----------
-
     @Test
     void estouroDoPrazoDeLeituraDevolve504EAindaTentaTresVezes() throws Exception {
         astra.stubFor(post(urlEqualTo("/ask")).willReturn(okJson(RESPOSTA_ASTRA).withFixedDelay(1800)));
@@ -264,8 +252,6 @@ class PerguntaControllerTest {
 
         assertThat(chamadasAoAstra()).isEqualTo(3);
     }
-
-    // ---------- circuit breaker ----------
 
     @Test
     void circuitoAbreDepoisDeFalhasEPassaARecusarSemChamarOAstra() throws Exception {
@@ -297,8 +283,6 @@ class PerguntaControllerTest {
         assertThat(chamadasAoAstra()).isEqualTo(6);
     }
 
-    // ---------- resposta fora do formato ----------
-
     @Test
     void respostaDoAstraForaDoFormatoDevolve502SemRetry() throws Exception {
         astra.stubFor(post(urlEqualTo("/ask")).willReturn(okJson("[1,2,3]")));
@@ -307,8 +291,6 @@ class PerguntaControllerTest {
 
         assertThat(chamadasAoAstra()).isEqualTo(1);
     }
-
-    // ---------- documentação e saúde ----------
 
     @Test
     void openApiDescreveOEndpointDePerguntas() throws Exception {
