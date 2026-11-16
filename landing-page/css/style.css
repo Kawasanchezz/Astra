@@ -48,10 +48,7 @@
   --send-grad: linear-gradient(135deg, #a9bcdd 0%, #859ecb 100%);
   --on-gold: #0e1626;
 
-  --ok: #4ade80;
   --danger: #ff8a7a;
-  --danger-grad: linear-gradient(135deg, #e05a4a, #b53225);
-  --on-danger: #fff;
   --danger-soft: rgba(255, 138, 122, 0.14);
   --select-pop: #2b2a27;
   --anon-chrome: #eceae4;
@@ -340,7 +337,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.side-menu__meta .status-dot { width: 8px; height: 8px; }
 
 .side-menu__sep { height: 1px; margin: 5px 4px; background: var(--border); }
 
@@ -1070,7 +1066,6 @@ body {
   animation: msgIn 0.2s ease;
 }
 
-.modal__card--sm { width: min(380px, 100%) !important; }
 
 .modal__card {
   width: min(420px, 100%);
@@ -1171,9 +1166,6 @@ body {
 .select option { background: var(--select-pop); color: var(--text); }
 .muted { color: var(--text-soft); font-size: 0.8rem; margin-top: 2px; }
 
-.status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--text-soft); flex-shrink: 0; }
-.status-dot.is-on { background: var(--ok); box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.20); }
-.status-dot.is-off { background: var(--danger); box-shadow: 0 0 0 4px rgba(255, 138, 122, 0.20); }
 
 .btn {
   display: inline-flex;
@@ -1190,8 +1182,6 @@ body {
   transition: filter 0.2s, transform 0.2s, background 0.2s;
 }
 .btn :is(i, svg) { width: 16px; height: 16px; }
-.btn--danger { background: var(--danger-grad); color: var(--on-danger); }
-.btn--danger:hover { filter: brightness(1.12); transform: translateY(-1px); }
 .btn--ghost { background: var(--glass); color: var(--text); border: 1px solid var(--border); }
 .btn--ghost:hover { background: var(--glass-hover); }
 
@@ -1249,9 +1239,7 @@ body {
   --send-grad: linear-gradient(135deg, #a9bcdd 0%, #859ecb 100%);
   --select-pop: #ffffff;
 
-  --ok: #1f9d55;
   --danger: #b3261e;
-  --danger-grad: linear-gradient(135deg, #d2453b, #9e2018);
   --danger-soft: rgba(179, 38, 30, 0.10);
 }
 
@@ -1274,8 +1262,6 @@ body {
     --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.45);
     --send-grad: linear-gradient(135deg, #a9bcdd 0%, #859ecb 100%);
     --select-pop: #2b2a27;
-    --ok: #4ade80; --danger: #ff8a7a;
-    --danger-grad: linear-gradient(135deg, #e05a4a, #b53225);
     --danger-soft: rgba(255, 138, 122, 0.14);
   }
 }
