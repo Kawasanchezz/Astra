@@ -21,7 +21,7 @@ from config import (
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
 from core.prompt_mestre import PromptMestre
-from services.ia_service import FalhaLlm, obter_resposta_ia
+from services.ia_service import FalhaLlm, obter_resposta_ia, sanitizar_input
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
@@ -60,7 +60,8 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=[RATE_LIMIT_DEFAULT],
-    storage_uri=RATELIMIT_STORAGE_URI
+    storage_uri=RATELIMIT_STORAGE_URI,
+    headers_enabled=True
 )
 
 system_prompt = PromptMestre().get_prompt()
@@ -152,7 +153,10 @@ def chat():
         if origem not in ALLOWED_ORIGINS and origem != mesmo_site:
             return jsonify({"erro": "Origem nao permitida"}), 403
 
-    dados = request.get_json(silent=True)
+    try:
+        dados = request.get_json(silent=True)
+    except RecursionError:
+        dados = None
 
     if not dados or not isinstance(dados, dict):
         return jsonify({"erro": "Dados invalidos"}), 400
@@ -160,7 +164,7 @@ def chat():
     mensagem = dados.get("mensagem", "")
     if not isinstance(mensagem, str):
         return jsonify({"erro": "Dados invalidos"}), 400
-    mensagem = mensagem.strip()
+    mensagem = sanitizar_input(mensagem)
     if not mensagem:
         return jsonify({"erro": "Mensagem vazia"}), 400
 
@@ -190,7 +194,10 @@ def chat():
     try:
         resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo, idioma)
     except FalhaLlm as falha:
-        return jsonify({"erro": falha.mensagem}), falha.status
+        resposta_erro = jsonify({"erro": falha.mensagem})
+        if falha.retry_apos:
+            resposta_erro.headers["Retry-After"] = str(falha.retry_apos)
+        return resposta_erro, falha.status
     finally:
         _vagas_ia.release()
 

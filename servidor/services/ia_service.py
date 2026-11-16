@@ -11,6 +11,7 @@ from config import (
     MAX_HISTORY_SIZE, MAX_INPUT_LENGTH, MAX_HISTORY_CHARS, ALLOWED_MODELS,
     MAX_TOKENS_RESPOSTA, IDIOMAS
 )
+from core.orcamento import estimar_tokens, orcamento_diario
 from core.seguranca import avaliar_mensagem, mascarar_segredos
 from core.validador import validar_resposta
 
@@ -37,11 +38,12 @@ AVISO_DADO_COM_INSTRUCAO = (
 )
 
 class FalhaLlm(Exception):
-    def __init__(self, status: int, mensagem: str, motivo: str):
+    def __init__(self, status: int, mensagem: str, motivo: str, retry_apos: int | None = None):
         super().__init__(motivo)
         self.status = status
         self.mensagem = mensagem
         self.motivo = motivo
+        self.retry_apos = retry_apos
 
 def traduzir_erro_llm(erro: Exception) -> FalhaLlm:
     if isinstance(erro, APITimeoutError):
@@ -63,7 +65,7 @@ def sanitizar_input(texto: str) -> str:
     texto = texto.strip()
     texto = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", texto)
     texto = re.sub(r"[​-‏‪-‮﻿]", "", texto)
-    return re.sub(r"[\ud800-\udfff]", "", texto)
+    return re.sub(r"[\ud800-\udfff]", "", texto).strip()
 
 def validar_historico(historico: list | None) -> list[dict[str, str]]:
     """Garante que o historico de conversa ta limpo e no tamanho certo"""
@@ -130,6 +132,11 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list | None 
     messages.append({"role": "user", "content": mensagem})
 
     modelo_ativo = modelo if (modelo and modelo in ALLOWED_MODELS) else GROQ_MODEL
+    estimativa = sum(estimar_tokens(str(m.get("content") or "")) for m in messages) + MAX_TOKENS_RESPOSTA
+    if not orcamento_diario.reservar(estimativa):
+        logger.warning("Orcamento diario de tokens esgotado")
+        raise FalhaLlm(429, "A cota diaria da IA acabou. Tente novamente amanha.", "orcamento_diario",
+                       orcamento_diario.segundos_ate_reiniciar())
     try:
         resp = client.chat.completions.create(
             model=modelo_ativo,
@@ -138,8 +145,11 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list | None 
             max_tokens=MAX_TOKENS_RESPOSTA,
             timeout=GROQ_TIMEOUT
         )
+        gasto_real = getattr(getattr(resp, "usage", None), "total_tokens", None)
+        orcamento_diario.acertar(estimativa, gasto_real if isinstance(gasto_real, int) else None)
         conteudo = resp.choices[0].message.content if resp.choices else None
     except Exception as erro:
+        orcamento_diario.acertar(estimativa, 0)
         falha = traduzir_erro_llm(erro)
         logger.error("Falha na LLM: motivo=%s tipo=%s status_groq=%s", falha.motivo, type(erro).__name__,
                      getattr(erro, "status_code", None))

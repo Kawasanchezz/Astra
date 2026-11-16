@@ -41,4 +41,5 @@ API_PORT = _env_int("RAG_API_PORT", 8000)
 API_MAX_PERGUNTA = _env_int("RAG_API_MAX_PERGUNTA", 500)
 API_MAX_CORPO = _env_int("RAG_API_MAX_CORPO", 4096)
 API_TIMEOUT_LLM = _env_float("RAG_API_TIMEOUT_LLM", 25.0)
+API_LIMITE = os.environ.get("RAG_API_LIMITE", "60 per minute")
 API_TOKEN = os.environ.get("RAG_API_TOKEN") or None

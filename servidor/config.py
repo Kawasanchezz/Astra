@@ -86,6 +86,7 @@ MAX_TOKENS_RESPOSTA = max(64, min(_env_int("MAX_TOKENS_RESPOSTA", 1024), 4096))
 MAX_CONCURRENT_REQUESTS = _env_int("MAX_CONCURRENT_REQUESTS", 4)
 
 RATE_LIMIT_GLOBAL = os.environ.get("RATE_LIMIT_GLOBAL", "300 per hour")
+ORCAMENTO_DIARIO_TOKENS = _env_int("ORCAMENTO_DIARIO_TOKENS", 1000000)
 
 def validar_configuracao():
     """Valida a configuracao e avisa sobre riscos de seguranca no boot."""

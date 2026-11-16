@@ -12,7 +12,7 @@ import main
 from rag import llm
 from rag.api import criar_app
 from services import ia_service
-from test_chat_bugs import ClienteFalso, resposta_llm
+from apoio import ClienteFalso, resposta_llm
 from test_rag import EmbedderFalso
 
 RAIZ = Path(__file__).resolve().parent.parent

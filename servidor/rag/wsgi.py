@@ -2,8 +2,8 @@
 import logging
 
 from rag.api import Limites, criar_app
-from rag.configuracao import (API_MAX_CORPO, API_MAX_PERGUNTA, API_TIMEOUT_LLM, API_TOKEN, INDEX_DIR,
-                              MODELO_EMBEDDING)
+from rag.configuracao import (API_LIMITE, API_MAX_CORPO, API_MAX_PERGUNTA, API_TIMEOUT_LLM, API_TOKEN,
+                              INDEX_DIR, MODELO_EMBEDDING)
 from rag.embeddings import FastEmbedEmbedder
 from rag.indice import IndiceVetorial
 from rag.llm import llm_groq
@@ -22,7 +22,7 @@ def criar_app_padrao():
                       "acao": "rode: python -m rag indexar"})
     return criar_app(indice, embedder, llm_groq,
                      limites=Limites(max_pergunta=API_MAX_PERGUNTA, max_corpo=API_MAX_CORPO,
-                                     timeout_llm=API_TIMEOUT_LLM),
+                                     timeout_llm=API_TIMEOUT_LLM, limite_de_requisicoes=API_LIMITE),
                      token=API_TOKEN)
 
 app = criar_app_padrao()

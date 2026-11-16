@@ -10,19 +10,21 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as PrazoEsgotado
 from dataclasses import dataclass
 
 from flask import Flask, Response, g, jsonify, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import HTTPException
 
-from rag.configuracao import SCORE_MINIMO, TOP_K
+from rag.configuracao import API_LIMITE, SCORE_MINIMO, TOP_K
 from rag.consulta import Llm, perguntar
 from rag.embeddings import Embedder
 from rag.indice import IndiceVetorial
-from rag.llm import LlmNaoConfigurado
+from rag.llm import LlmNaoConfigurado, OrcamentoEsgotado
 from rag.prompts import Prompts, prompts_padrao
 
 logger = logging.getLogger("rag.api")
 
 _ID_VALIDO = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
-_CODIGOS_HTTP = {404: "nao_encontrado", 405: "metodo_nao_permitido", 413: "corpo_grande"}
+_CODIGOS_HTTP = {404: "nao_encontrado", 405: "metodo_nao_permitido", 413: "corpo_grande", 429: "limite_excedido"}
 
 @dataclass(frozen=True)
 class Limites:
@@ -31,6 +33,7 @@ class Limites:
     timeout_llm: float = 25.0
     max_k: int = 10
     max_concorrencia: int = 4
+    limite_de_requisicoes: str = API_LIMITE
 
 class ErroApi(Exception):
     def __init__(self, status: int, codigo: str, mensagem: str):
@@ -47,6 +50,8 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = limites.max_corpo
     prompts = prompts or prompts_padrao()
+    limitador = Limiter(key_func=get_remote_address, app=app, default_limits=[], storage_uri="memory://",
+                        headers_enabled=True)
     executor = ThreadPoolExecutor(max_workers=limites.max_concorrencia, thread_name_prefix="llm")
     vagas = threading.BoundedSemaphore(limites.max_concorrencia)
 
@@ -71,6 +76,8 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
         except PrazoEsgotado:
             futuro.cancel()
             raise ErroApi(504, "llm_timeout", "O modelo demorou demais para responder.") from None
+        except OrcamentoEsgotado:
+            raise ErroApi(429, "orcamento_diario", "A cota diária do modelo acabou. Tente novamente amanhã.") from None
         except LlmNaoConfigurado:
             raise ErroApi(503, "llm_nao_configurado", "O modelo não está configurado neste serviço.") from None
         except Exception as e:
@@ -113,6 +120,7 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
         return jsonify(corpo), 200 if pronto else 503
 
     @app.post("/ask")
+    @limitador.limit(limites.limite_de_requisicoes)
     def ask():
         if not request.is_json:
             raise ErroApi(415, "tipo_invalido", "Envie JSON com Content-Type: application/json.")
@@ -157,7 +165,9 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
     def erro_http(e: HTTPException):
         codigo = _CODIGOS_HTTP.get(e.code or 400, "requisicao_invalida")
         g.setdefault("log", {})["erro_codigo"] = codigo
-        return _erro(e.code or 400, codigo, "Requisição inválida." if (e.code or 400) < 500 else "Erro no servidor.")
+        mensagem = "Muitas requisições. Aguarde um pouco." if e.code == 429 else (
+            "Requisição inválida." if (e.code or 400) < 500 else "Erro no servidor.")
+        return _erro(e.code or 400, codigo, mensagem)
 
     @app.errorhandler(Exception)
     def erro_inesperado(e: Exception):
