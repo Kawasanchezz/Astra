@@ -62,3 +62,28 @@ def test_csp_bloqueia_script_e_estilo_injetados_na_pagina(servidor, pagina):
     violacoes = pagina.evaluate("() => window.__csp")
     assert any(v.startswith("script-src") for v in violacoes) and any(v.startswith("style-src") for v in violacoes)
     assert pagina.locator("body").is_visible()
+
+
+def test_resposta_que_chega_depois_de_trocar_de_conversa_nao_vai_para_a_nova(servidor, pagina):
+    pendentes = []
+    pagina.route("**/chat", lambda rota: pendentes.append(rota))
+    pagina.goto(servidor + "/app")
+    pagina.wait_for_selector("#promptInput")
+
+    pagina.fill("#promptInput", "pergunta A")
+    pagina.click("#sendBtn")
+    pagina.wait_for_selector("#thinking")
+
+    pagina.locator("#sidebarOpen").click()
+    pagina.click("#newChatBtn")
+    pendentes[0].fulfill(json={"resposta": "resposta A"})
+    pagina.wait_for_timeout(500)
+
+    assert "resposta A" not in pagina.locator("#messages").inner_text()
+    guardadas = pagina.evaluate("JSON.parse(localStorage.getItem('credix_landing_chats') || '{}')")
+    textos = [m["content"] for c in guardadas.values() for m in c["messages"]]
+    assert "resposta A" in textos
+    for chat in guardadas.values():
+        if any(m["content"] == "resposta A" for m in chat["messages"]):
+            assert any(m["content"] == "pergunta A" for m in chat["messages"])
+            assert chat["messages"][0]["content"] == "pergunta A"

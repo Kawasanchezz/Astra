@@ -260,15 +260,37 @@ function montarPayload(text, arquivos) {
   return payload;
 }
 
-function tratarResposta(data, textoEnviado) {
+function gravarEmConversaAnterior(id, existia, mensagens) {
+  if (anonimo) return;
+  const atual = chats[id];
+  if (existia && !atual) return;
+  const primeira = mensagens[0].content;
+  const titulo = primeira.slice(0, 32) + (primeira.length > 32 ? '…' : '');
+  chats[id] = {
+    id,
+    title: atual?.title || titulo,
+    messages: [...(atual?.messages || []), ...mensagens],
+    ts: Date.now(),
+    pinned: atual?.pinned || false
+  };
+  salvarChats();
+}
+
+function tratarResposta(data, textoEnviado, origem, origemSalva) {
+  const naConversaAtual = origem === chatId;
   if (data.erro) {
-    addBotMsg(`Erro: ${data.erro}`, true);
+    if (naConversaAtual) addBotMsg(`Erro: ${data.erro}`, true);
     return;
   }
-  addBotMsg(data.resposta);
-  history.push({ role: 'user', content: textoEnviado || '(arquivo anexado)' });
-  history.push({ role: 'assistant', content: data.resposta });
-  saveCurrent();
+  const pergunta = { role: 'user', content: textoEnviado || '(arquivo anexado)' };
+  const resposta = { role: 'assistant', content: data.resposta };
+  if (naConversaAtual) {
+    addBotMsg(data.resposta);
+    history.push(pergunta, resposta);
+    saveCurrent();
+  } else {
+    gravarEmConversaAnterior(origem, origemSalva, [pergunta, resposta]);
+  }
   renderHistoryList();
 }
 
@@ -279,6 +301,8 @@ async function send(presetText) {
 
   enterChatMode();
 
+  const origem = chatId;
+  const origemSalva = Boolean(chats[origem]);
   const sentFiles = [...attachments];
   addUserMsg(text || '(arquivo anexado)', sentFiles);
   contarUso();
@@ -317,7 +341,7 @@ async function send(presetText) {
     });
     const data = await res.json();
     hideThinking();
-    tratarResposta(data, text);
+    tratarResposta(data, text, origem, origemSalva);
   } catch (e) {
     hideThinking();
     addBotMsg(aviso().falha, true);
