@@ -3,7 +3,10 @@ from typing import cast
 
 from groq.types.chat import ChatCompletionMessageParam
 
-from config import GROQ_API_KEY, GROQ_MAX_RETRIES, GROQ_MODEL, GROQ_TIMEOUT, MAX_TOKENS_RESPOSTA
+from config import (GROQ_API_KEY, GROQ_MAX_RETRIES, GROQ_MODEL, GROQ_TIMEOUT, MAX_TOKENS_RESPOSTA,
+                    chave_groq_configurada, restringir_logs_de_terceiros)
+
+restringir_logs_de_terceiros()
 
 _cliente = None
 _trava_cliente = threading.Lock()
@@ -21,7 +24,7 @@ def _obter_cliente():
 
 def llm_groq(mensagens: list[dict]) -> str:
     """Chama a Groq com o mesmo modelo e limites do chat. Exige GROQ_API_KEY."""
-    if not GROQ_API_KEY:
+    if not chave_groq_configurada():
         raise LlmNaoConfigurado("Defina GROQ_API_KEY em servidor/.env para usar o LLM.")
     resposta = _obter_cliente().chat.completions.create(
         model=GROQ_MODEL, messages=cast(list[ChatCompletionMessageParam], mensagens), temperature=0.2,

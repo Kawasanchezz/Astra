@@ -6,7 +6,8 @@ from groq import (APIConnectionError, APIStatusError, APITimeoutError, Authentic
 from groq.types.chat import ChatCompletionMessageParam
 
 from config import (
-    GROQ_API_KEY, GROQ_MODEL, GROQ_TIMEOUT, GROQ_MAX_RETRIES,
+    GROQ_API_KEY,
+    GROQ_MODEL, GROQ_TIMEOUT, GROQ_MAX_RETRIES, chave_groq_configurada, restringir_logs_de_terceiros,
     MAX_HISTORY_SIZE, MAX_INPUT_LENGTH, MAX_HISTORY_CHARS, ALLOWED_MODELS,
     MAX_TOKENS_RESPOSTA, IDIOMAS
 )
@@ -15,7 +16,9 @@ from core.validador import validar_resposta
 
 logger = logging.getLogger(__name__)
 
-if GROQ_API_KEY and GROQ_API_KEY != "gsk_COLOQUE_SUA_CHAVE_AQUI":
+restringir_logs_de_terceiros()
+
+if chave_groq_configurada():
     client: Groq | None = Groq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES)
 else:
     client = None

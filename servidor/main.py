@@ -16,7 +16,7 @@ from config import (
     ALLOWED_ORIGINS, FLASK_DEBUG, PORT,
     MAX_REQUEST_SIZE, RATE_LIMIT_DEFAULT, RATE_LIMIT_CHAT, RATE_LIMIT_DIARIO,
     MAX_INPUT_LENGTH, RATELIMIT_STORAGE_URI, FORCE_HTTPS, RATE_LIMIT_GLOBAL,
-    TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, GROQ_API_KEY,
+    TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, chave_groq_configurada,
     CHAT_ENABLED, GROQ_MAX_RETRIES, MAX_HISTORY_CHARS, MAX_CONCURRENT_REQUESTS,
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
@@ -211,7 +211,7 @@ def limites():
 @app.route("/health")
 def health():
     if IS_PRODUCTION:
-        return jsonify({"status": "Online e Seguro!", "ia_configurada": bool(GROQ_API_KEY)})
+        return jsonify({"status": "Online e Seguro!", "ia_configurada": chave_groq_configurada()})
     return jsonify({
         "status": "Online e Seguro!",
         "ambiente": APP_ENV,
@@ -224,7 +224,7 @@ def health():
         "max_request_kb": MAX_REQUEST_SIZE // 1024,
         "groq_max_retries": GROQ_MAX_RETRIES,
         "max_concorrencia": MAX_CONCURRENT_REQUESTS,
-        "ia_configurada": bool(GROQ_API_KEY),
+        "ia_configurada": chave_groq_configurada(),
     })
 
 @app.errorhandler(413)

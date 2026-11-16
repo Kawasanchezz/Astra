@@ -15,6 +15,14 @@ def _env_int(nome: str, padrao: int) -> int:
         return padrao
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+CHAVE_PLACEHOLDER = "gsk_COLOQUE_SUA_CHAVE_AQUI"
+
+def chave_groq_configurada() -> bool:
+    return bool(GROQ_API_KEY) and GROQ_API_KEY != CHAVE_PLACEHOLDER
+
+def restringir_logs_de_terceiros() -> None:
+    for nome in ("groq", "httpx", "httpcore"):
+        logging.getLogger(nome).setLevel(logging.WARNING)
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 _MODELOS_PADRAO = "openai/gpt-oss-120b,openai/gpt-oss-20b"
@@ -81,7 +89,7 @@ RATE_LIMIT_GLOBAL = os.environ.get("RATE_LIMIT_GLOBAL", "300 per hour")
 
 def validar_configuracao():
     """Valida a configuracao e avisa sobre riscos de seguranca no boot."""
-    if not GROQ_API_KEY or GROQ_API_KEY == "gsk_COLOQUE_SUA_CHAVE_AQUI":
+    if not chave_groq_configurada():
         logger.warning("⚠️ AVISO: Chave da Groq nao encontrada. O bot vai rodar em modo de teste.")
 
     if FORCE_HTTPS and TRUSTED_PROXY_COUNT == 0:
