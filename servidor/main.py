@@ -207,7 +207,7 @@ def limites():
 @app.route("/health")
 def health():
     if IS_PRODUCTION:
-        return jsonify({"status": "Online e Seguro!", "ia_configurada": bool(GROQ_API_KEY)})
+        return jsonify({"status": "Online e Seguro!"})
     return jsonify({
         "status": "Online e Seguro!",
         "ambiente": APP_ENV,
