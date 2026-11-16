@@ -308,6 +308,13 @@ class PerguntaControllerTest {
     }
 
     @Test
+    void endpointsQueExporiamConfiguracaoNaoEstaoDisponiveis() throws Exception {
+        for (String caminho : new String[] {"/actuator/env", "/actuator/configprops", "/actuator/beans"}) {
+            mvc.perform(get(caminho)).andExpect(status().isNotFound());
+        }
+    }
+
+    @Test
     void healthResponde200() throws Exception {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"));
     }
