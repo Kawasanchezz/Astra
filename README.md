@@ -175,7 +175,7 @@ O `X-Request-ID` enviado pelo cliente é reaproveitado (se tiver formato seguro)
 
 ```bash
 python -m venv .venv && source .venv/bin/activate     # no Windows: .venv\Scripts\activate
-pip install -r requirements-rag.txt
+pip install -r requirements-dev.txt        # inclui o RAG, os testes e as ferramentas
 cd servidor
 python -m rag indexar                                  # cria o índice (baixa o modelo na 1ª vez)
 python -m rag buscar "Como evitar SQL injection?"      # só a busca, sem LLM
@@ -269,7 +269,9 @@ afirmar qualidade (veja as limitações abaixo).
 ├── Dockerfile.rag       → imagem do serviço Python
 ├── docker-compose.yml   → gateway Java + serviço Python
 ├── requirements.txt     → dependências do chat (o que a Vercel instala)
-└── requirements-rag.txt → dependências do RAG e dos testes
+├── requirements-rag.txt → dependências do RAG
+├── requirements-rag.lock → as mesmas, fixadas com hash (usado pela imagem Docker)
+└── requirements-dev.txt → testes e ferramentas de segurança
 ```
 
 ## 📄 Licença

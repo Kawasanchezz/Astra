@@ -1,0 +1,11 @@
+# FERRAMENTAS DE DESENVOLVIMENTO (testes e verificações de segurança). Não vai para a imagem nem para a Vercel.
+#     pip install -r requirements-dev.txt
+
+-r requirements-rag.txt
+
+pytest>=8,<10             # testes (pytest tests/)
+playwright>=1.49,<2       # testes de XSS/CSP no navegador (playwright install chromium)
+ruff>=0.8,<1              # lint
+mypy>=1.13,<3             # tipos
+bandit>=1.8,<2            # análise estática de segurança
+pip-audit>=2.7,<3         # CVEs nas dependências

@@ -5,6 +5,19 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+  - package-ecosystem: maven
+    directory: /ai-gateway-java
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /ai-gateway-java
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:

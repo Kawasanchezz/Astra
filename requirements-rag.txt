@@ -9,4 +9,3 @@
 faiss-cpu>=1.9,<2         # índice vetorial local
 fastembed>=0.7,<1         # embeddings via ONNX, sem PyTorch e sem chave de API
 numpy>=2,<3
-pytest>=8,<10             # testes (pytest tests/)

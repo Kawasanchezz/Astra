@@ -29,7 +29,11 @@ jobs:
           GROQ_API_KEY: chave-falsa-para-teste
         run: python -c "import app"
       - name: Procurar vulnerabilidades nas dependências
-        run: pip-audit -r requirements.txt
+        run: |
+          pip-audit -r requirements.txt
+          pip-audit -r requirements-rag.lock --no-deps --disable-pip
+      - name: Análise estática de segurança (bandit)
+        run: pip install bandit && bandit -r servidor app.py -ll
 
   codeql:
     name: Análise de segurança (CodeQL)

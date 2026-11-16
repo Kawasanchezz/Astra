@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
-REQUISITOS = ["requirements.txt", "requirements-rag.txt"]
+REQUISITOS = ["requirements.txt", "requirements-rag.txt", "requirements-dev.txt"]
 
 
 def dependencias(arquivo):
