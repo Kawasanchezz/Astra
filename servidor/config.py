@@ -16,7 +16,6 @@ def _env_int(nome: str, padrao: int) -> int:
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
-GROQ_TIMEOUT = _env_int("GROQ_TIMEOUT", 30)
 
 _MODELOS_PADRAO = "openai/gpt-oss-120b,openai/gpt-oss-20b"
 _modelos = {m.strip() for m in os.environ.get("ALLOWED_MODELS", _MODELOS_PADRAO).split(",") if m.strip()}
@@ -59,9 +58,15 @@ MAX_HISTORY_SIZE = 16
 
 MAX_HISTORY_CHARS = 12000
 
-MAX_REQUEST_SIZE = 32 * 1024
+BYTES_POR_CARACTERE = 4
+MAX_REQUEST_SIZE = BYTES_POR_CARACTERE * (MAX_INPUT_LENGTH + MAX_HISTORY_CHARS) + 16 * 1024
 
-GROQ_MAX_RETRIES = _env_int("GROQ_MAX_RETRIES", 1)
+def calcular_timeout_llm(timeout_bruto: int, tentativas_extras: int, prazo_total: int) -> int:
+    return max(5, min(timeout_bruto, prazo_total // (tentativas_extras + 1)))
+
+GROQ_MAX_RETRIES = max(0, min(_env_int("GROQ_MAX_RETRIES", 1), 3))
+PRAZO_TOTAL_LLM = _env_int("PRAZO_TOTAL_LLM", 25)
+GROQ_TIMEOUT = calcular_timeout_llm(_env_int("GROQ_TIMEOUT", 30), GROQ_MAX_RETRIES, PRAZO_TOTAL_LLM)
 
 CHAT_ENABLED = os.environ.get("CHAT_ENABLED", "true").strip().lower() != "false"
 RATE_LIMIT_DEFAULT = "60 per minute"
