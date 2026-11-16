@@ -4,7 +4,7 @@
 -r requirements-rag.txt
 
 pytest>=8,<10             # testes (pytest tests/)
-playwright>=1.49,<2       # testes de XSS/CSP no navegador (playwright install chromium)
+playwright>=1.65.1,<2       # testes de XSS/CSP no navegador (playwright install chromium)
 ruff>=0.8,<1              # lint
 mypy>=1.13,<3             # tipos
 bandit>=1.8,<2            # análise estática de segurança
