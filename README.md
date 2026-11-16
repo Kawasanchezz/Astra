@@ -214,6 +214,10 @@ afirmar qualidade (veja as limitações abaixo).
 - [`docs/prompts.md`](docs/prompts.md): por que os prompts são arquivos, como a versão é calculada, defesa contra injeção por documento.
 - [`docs/avaliacao.md`](docs/avaliacao.md): métricas, resultados e cada falha encontrada.
 - **Sem LangChain:** são 4 etapas pequenas (dividir, vetorizar, buscar, montar o prompt) e o fluxo direto fica mais claro e com menos dependências.
+- **Trechos de ~450 caracteres:** o modelo de embeddings corta o texto em cerca de 128 tokens; trechos maiores perderiam o final no vetor.
+- **Retry por fora, circuit breaker por dentro** (`AstraClient`): cada tentativa conta para o circuito e, com ele aberto, o retry não insiste. Erro 4xx do Astra não é repetido nem conta como falha.
+- **Prazos:** o Python corta o LLM em 25 s e o gateway espera 30 s, para receber o erro do Python em vez de estourar antes.
+- **Rede interna:** o serviço Python não publica porta no compose, e `/ask` pode exigir `Authorization: Bearer` (`RAG_API_TOKEN`).
 
 ### ⚠️ Limitações conhecidas
 
