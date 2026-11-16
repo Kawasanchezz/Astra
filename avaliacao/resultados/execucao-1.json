@@ -1,0 +1,320 @@
+{
+ "data": "2026-11-15T21:19:13",
+ "versao_prompt": "9443c9e176",
+ "modelo_llm": "openai/gpt-oss-120b",
+ "modelo_embedding": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+ "k": 4,
+ "score_minimo": 0.35,
+ "resumo": {
+  "perguntas": 10,
+  "aprovadas": 9,
+  "responder": {
+   "total": 8,
+   "recuperou_documento_certo": 7,
+   "documento_certo_em_primeiro": 6,
+   "citou_fonte_certa": 7,
+   "citacao_no_formato": 5,
+   "citacao_invalida": 0,
+   "termos_esperados": 7,
+   "recusou_indevidamente": 1
+  },
+  "recusar": {
+   "total": 2,
+   "recusou_corretamente": 2
+  }
+ },
+ "resultados": [
+  {
+   "id": "q01",
+   "pergunta": "Se uma transferência bancária falha no meio do caminho, o que garante que o dinheiro não suma?",
+   "esperado": "Atomicidade: a transação é tudo ou nada, e se o crédito falhar o débito é desfeito com ROLLBACK.",
+   "resposta": "A propriedade **Atomicidade** da transação garante que, se alguma etapa da transferência falhar, todas as operações anteriores são desfeitas por meio de um `ROLLBACK`, evitando que o dinheiro desapareça [1]. Assim, a transferência só é concluída quando todas as partes (débit e crédito) são executadas com sucesso [2].",
+   "recuperados": [
+    {
+     "fonte": "transacoes-acid.md",
+     "secao": "Transações e ACID > Propriedades ACID",
+     "score": 0.607
+    },
+    {
+     "fonte": "transacoes-acid.md",
+     "secao": "Transações e ACID > O que é uma transação",
+     "score": 0.583
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": true,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q02",
+   "pergunta": "Qual a diferença entre WHERE e HAVING?",
+   "esperado": "WHERE filtra as linhas antes do agrupamento; HAVING filtra depois, sobre o resultado das agregações.",
+   "resposta": "Não encontrei isso nos documentos indexados, então prefiro não responder.",
+   "recuperados": [],
+   "deve_responder": true,
+   "recuperou_fonte": false,
+   "fonte_em_primeiro": false,
+   "recusou": true,
+   "citou_fonte_certa": false,
+   "citacao_invalida": false,
+   "formato_citacao_ok": false,
+   "termos_ok": false,
+   "aprovado": false,
+   "motivos_de_falha": [
+    "recusou uma pergunta que os documentos cobrem",
+    "o documento certo não foi recuperado",
+    "não citou o trecho do documento certo",
+    "faltam os termos esperados na resposta"
+   ]
+  },
+  {
+   "id": "q03",
+   "pergunta": "Por que não devo usar double para valores em reais no Java?",
+   "esperado": "Ponto flutuante binário não representa decimais com exatidão; use BigDecimal para dinheiro.",
+   "resposta": "Porque o tipo `double` usa ponto flutuante binário, que não representa valores decimais com exatidão, podendo gerar erros de precisão ao lidar com dinheiro; por isso recomenda‑se usar `BigDecimal` em vez de `double` [1].",
+   "recuperados": [
+    {
+     "fonte": "java-essencial.md",
+     "secao": "Java essencial > Coleções",
+     "score": 0.545
+    },
+    {
+     "fonte": "java-essencial.md",
+     "secao": "Java essencial > Optional",
+     "score": 0.425
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": true,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q04",
+   "pergunta": "O que é uma chave de idempotência e quando usar?",
+   "esperado": "Chave enviada pelo cliente para que repetir a chamada não repita o efeito, por exemplo para não cobrar duas vezes em pagamentos.",
+   "resposta": "Uma **chave de idempotência** é um identificador enviado pelo cliente que permite que a operação seja tratada como idempotente, ou seja, repetições da mesma chamada resultam no mesmo estado final sem efeitos colaterais adicionais.  \nUse‑a em situações em que chamadas podem ser repetidas (por exemplo, por falhas de rede) e é crítico evitar ações duplicadas, como em **processos de pagamento**, para que uma retentativa não cobre duas vezes o cliente【4】.",
+   "recuperados": [
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Estruturas de dados",
+     "score": 0.438
+    },
+    {
+     "fonte": "sql-basico.md",
+     "secao": "SQL básico > Chave primária e chave estrangeira",
+     "score": 0.429
+    },
+    {
+     "fonte": "seguranca-web.md",
+     "secao": "Segurança em aplicações web > Segredos e logs",
+     "score": 0.404
+    },
+    {
+     "fonte": "http-e-rest.md",
+     "secao": "HTTP e APIs REST > Idempotência",
+     "score": 0.382
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": false,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": false,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q05",
+   "pergunta": "Como evitar que alguém execute SQL malicioso pela entrada de um formulário?",
+   "esperado": "Usar consultas parametrizadas (prepared statements), em que o valor nunca é interpretado como código SQL.",
+   "resposta": "Use consultas parametrizadas (prepared statements), evitando concatenar a entrada do usuário diretamente nas instruções SQL; assim o valor nunca é interpretado como código SQL [1].",
+   "recuperados": [
+    {
+     "fonte": "seguranca-web.md",
+     "secao": "Segurança em aplicações web > Injeção de SQL",
+     "score": 0.709
+    },
+    {
+     "fonte": "sql-basico.md",
+     "secao": "SQL básico > Índices",
+     "score": 0.54
+    },
+    {
+     "fonte": "sql-basico.md",
+     "secao": "SQL básico > JOIN",
+     "score": 0.488
+    },
+    {
+     "fonte": "sql-basico.md",
+     "secao": "SQL básico > SELECT e filtros",
+     "score": 0.48
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": true,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q06",
+   "pergunta": "Qual a diferença entre uma tupla e uma lista em Python?",
+   "esperado": "A lista é mutável e a tupla é imutável.",
+   "resposta": "Listas são estruturas ordenadas e **mutáveis**, permitindo inserção, remoção e alteração de elementos; já as tuplas são **imutáveis**, não podem ser modificadas após a criação, embora também mantenham a ordem dos itens [1].",
+   "recuperados": [
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Estruturas de dados",
+     "score": 0.637
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Geradores",
+     "score": 0.471
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Tratamento de exceções",
+     "score": 0.439
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Context managers",
+     "score": 0.407
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": true,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q07",
+   "pergunta": "Como desfazer um commit que já foi enviado sem reescrever a história?",
+   "esperado": "Com git revert, que cria um novo commit que desfaz o anterior.",
+   "resposta": "Use `git revert <commit>` para criar um novo commit que desfaz o anterior, mantendo a história intacta【1】.",
+   "recuperados": [
+    {
+     "fonte": "git-basico.md",
+     "secao": "Git básico > Desfazendo coisas",
+     "score": 0.493
+    },
+    {
+     "fonte": "git-basico.md",
+     "secao": "Git básico > Mensagens de commit",
+     "score": 0.436
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": false,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q08",
+   "pergunta": "Para que serve a instrução with em Python?",
+   "esperado": "Garante a liberação de recursos, como fechar um arquivo mesmo se ocorrer erro (context manager).",
+   "resposta": "A instrução `with` garante a liberação automática de recursos, por exemplo fechando um arquivo mesmo que ocorra erro durante sua manipulação. Ela funciona com qualquer objeto que implemente os métodos `__enter__` e `__exit__`, e o módulo `contextlib.contextmanager` permite criar esses contextos usando geradores. [2]",
+   "recuperados": [
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Geradores",
+     "score": 0.616
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Context managers",
+     "score": 0.579
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Estruturas de dados",
+     "score": 0.524
+    },
+    {
+     "fonte": "python-essencial.md",
+     "secao": "Python essencial > Tratamento de exceções",
+     "score": 0.452
+    }
+   ],
+   "deve_responder": true,
+   "recuperou_fonte": true,
+   "fonte_em_primeiro": true,
+   "recusou": false,
+   "citou_fonte_certa": true,
+   "citacao_invalida": false,
+   "formato_citacao_ok": true,
+   "termos_ok": true,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q09",
+   "pergunta": "Qual a capital da Austrália?",
+   "esperado": "Recusar: o assunto não está nos documentos.",
+   "resposta": "Não encontrei isso nos documentos indexados, então prefiro não responder.",
+   "recuperados": [],
+   "deve_responder": false,
+   "recuperou_fonte": false,
+   "fonte_em_primeiro": false,
+   "recusou": true,
+   "citou_fonte_certa": false,
+   "citacao_invalida": false,
+   "formato_citacao_ok": false,
+   "termos_ok": false,
+   "aprovado": true,
+   "motivos_de_falha": []
+  },
+  {
+   "id": "q10",
+   "pergunta": "Como o Hibernate mapeia entidades para tabelas?",
+   "esperado": "Recusar: os documentos citam Java e Spring, mas não falam de Hibernate.",
+   "resposta": "Não encontrei isso nos documentos indexados, então prefiro não responder.",
+   "recuperados": [],
+   "deve_responder": false,
+   "recuperou_fonte": false,
+   "fonte_em_primeiro": false,
+   "recusou": true,
+   "citou_fonte_certa": false,
+   "citacao_invalida": false,
+   "formato_citacao_ok": false,
+   "termos_ok": false,
+   "aprovado": true,
+   "motivos_de_falha": []
+  }
+ ]
+}
