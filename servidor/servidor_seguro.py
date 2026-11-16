@@ -1,4 +1,3 @@
-import contextlib
 import os
 import subprocess
 import time
@@ -17,9 +16,11 @@ def limpar_porta(porta):
             if not pid.isdigit():
                 continue
             print(f"[!] Limpando porta {porta} (ID do processo: {pid})...")
-            with contextlib.suppress(OSError, subprocess.SubprocessError):
+            try:
                 subprocess.run(["taskkill", "/F", "/PID", pid],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except (OSError, subprocess.SubprocessError):
+                pass
             time.sleep(0.5)
 
 if __name__ == "__main__":

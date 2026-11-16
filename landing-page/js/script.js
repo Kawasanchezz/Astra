@@ -46,7 +46,6 @@ const AVISOS = {
 const aviso = () => AVISOS[(lsGet('astra_idioma', 'pt') || 'pt').slice(0, 2)] || AVISOS.pt;
 const MAX_PAYLOAD = 7500;
 const MAX_HISTORY_PAYLOAD = 10000;
-const PRAZO_RESPOSTA_MS = 40000;
 const MAX_FILE_BYTES = 200 * 1024;
 const MAX_FILE_CHARS = 7000;
 
@@ -100,13 +99,6 @@ function escapeHtml(s) {
   ));
 }
 
-const CONFIG_SANITIZACAO = {
-  FORBID_TAGS: ['img', 'form', 'input', 'button', 'textarea', 'select', 'option', 'style', 'link', 'meta', 'base',
-    'iframe', 'object', 'embed', 'svg', 'math', 'video', 'audio', 'source', 'picture', 'script'],
-  FORBID_ATTR: ['style', 'srcset', 'action', 'formaction'],
-  ALLOW_DATA_ATTR: false,
-};
-
 if (typeof DOMPurify !== 'undefined') {
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A' && node.hasAttribute('href')) {
@@ -120,7 +112,7 @@ function renderMarkdown(text) {
   if (typeof marked === 'undefined') return escapeHtml(text);
   try {
     const html = marked.parse(text);
-    return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, CONFIG_SANITIZACAO) : escapeHtml(text);
+    return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html) : escapeHtml(text);
   } catch { return escapeHtml(text); }
 }
 
@@ -260,37 +252,15 @@ function montarPayload(text, arquivos) {
   return payload;
 }
 
-function gravarEmConversaAnterior(id, existia, mensagens) {
-  if (anonimo) return;
-  const atual = chats[id];
-  if (existia && !atual) return;
-  const primeira = mensagens[0].content;
-  const titulo = primeira.slice(0, 32) + (primeira.length > 32 ? '…' : '');
-  chats[id] = {
-    id,
-    title: atual?.title || titulo,
-    messages: [...(atual?.messages || []), ...mensagens],
-    ts: Date.now(),
-    pinned: atual?.pinned || false
-  };
-  salvarChats();
-}
-
-function tratarResposta(data, textoEnviado, origem, origemSalva) {
-  const naConversaAtual = origem === chatId;
+function tratarResposta(data, textoEnviado) {
   if (data.erro) {
-    if (naConversaAtual) addBotMsg(`Erro: ${data.erro}`, true);
+    addBotMsg(`Erro: ${data.erro}`, true);
     return;
   }
-  const pergunta = { role: 'user', content: textoEnviado || '(arquivo anexado)' };
-  const resposta = { role: 'assistant', content: data.resposta };
-  if (naConversaAtual) {
-    addBotMsg(data.resposta);
-    history.push(pergunta, resposta);
-    saveCurrent();
-  } else {
-    gravarEmConversaAnterior(origem, origemSalva, [pergunta, resposta]);
-  }
+  addBotMsg(data.resposta);
+  history.push({ role: 'user', content: textoEnviado || '(arquivo anexado)' });
+  history.push({ role: 'assistant', content: data.resposta });
+  saveCurrent();
   renderHistoryList();
 }
 
@@ -301,8 +271,6 @@ async function send(presetText) {
 
   enterChatMode();
 
-  const origem = chatId;
-  const origemSalva = Boolean(chats[origem]);
   const sentFiles = [...attachments];
   addUserMsg(text || '(arquivo anexado)', sentFiles);
   contarUso();
@@ -325,12 +293,9 @@ async function send(presetText) {
     return;
   }
 
-  const controle = new AbortController();
-  const cancelarPorPrazo = setTimeout(() => controle.abort(), PRAZO_RESPOSTA_MS);
   try {
     const res = await fetch('/chat', {
       method: 'POST',
-      signal: controle.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mensagem: payload,
@@ -341,12 +306,11 @@ async function send(presetText) {
     });
     const data = await res.json();
     hideThinking();
-    tratarResposta(data, text, origem, origemSalva);
+    tratarResposta(data, text);
   } catch (e) {
     hideThinking();
     addBotMsg(aviso().falha, true);
   } finally {
-    clearTimeout(cancelarPorPrazo);
     sending = false;
     els.send.disabled = false;
     scrollBottom();

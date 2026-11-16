@@ -76,7 +76,6 @@ _LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t
                        "@": "a", "$": "s", "!": "i"})
 _INVISIVEIS = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2060\ufeff]")
 _LETRAS_SEPARADAS = re.compile(r"\b(?:\w[.\-_*]){3,}\w\b")
-_LETRAS_ESPACADAS = re.compile(r"\b(?:\w ){4,30}\w\b")
 
 def normalizar(texto: str) -> str:
     """Minúsculas, sem acento, sem caracteres invisíveis e sem homóglifos."""
@@ -84,7 +83,6 @@ def normalizar(texto: str) -> str:
     t = unicodedata.normalize("NFKD", t)
     t = "".join(c for c in t if not unicodedata.combining(c))
     t = _LETRAS_SEPARADAS.sub(lambda m: re.sub(r"[.\-_*]", "", m.group(0)), t)
-    t = _LETRAS_ESPACADAS.sub(lambda m: m.group(0).replace(" ", ""), t)
     return re.sub(r"\s+", " ", t.lower()).strip()
 
 _BLOCO_CODIGO = re.compile(r"```.*?(?:```|\Z)", re.DOTALL)
@@ -97,7 +95,7 @@ def _sem_codigo(texto: str) -> str:
     t = _BLOCO_CODIGO.sub(" ", texto)
     t = _CODIGO_INLINE.sub(" ", t)
     t = _TRECHO_CITADO.sub(" ", t)
-    return "\n".join(" " if linha.lstrip().startswith(_PREFIXOS_COMENTARIO) else linha for linha in t.split("\n"))
+    return "\n".join(" " if l.lstrip().startswith(_PREFIXOS_COMENTARIO) else l for l in t.split("\n"))
 
 def _decodificar_base64(texto: str) -> list[str]:
     """Textos legíveis escondidos em Base64 (o formato não muda o conteúdo)."""
@@ -179,8 +177,7 @@ _INVASAO = re.compile(
 
 _PEDIDOS_OVERRIDE = (
     re.compile(r"\bignor\w*\s+(?:todas?\s+)?(?:as\s+|suas\s+|essas\s+|estas\s+)?"
-               r"(?:regras|instrucoes|instrucao|diretrizes|restricoes)\b"
-               r"(?!\s+d[eao]s?\s+(?!sistema|system|seguranca|etica|voce)\w)"),
+               r"(?:regras|instrucoes|instrucao|diretrizes|restricoes)\b"),
     re.compile(r"\bignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier|your)"
                r"\s+(?:instructions|rules|prompts?|guidelines)"),
     re.compile(r"\b(?:esqueca|esquece|desconsidere|descarte|disregard|forget)\s+"
@@ -201,13 +198,6 @@ _PEDIDOS_OVERRIDE = (
     re.compile(r"\b(?:finja|pretend|aja\s+como|you\s+are\s+now)\b.{0,40}"
                r"\b(?:sem\s+(?:filtros?|restricoes|regras|limites|etica)|dan|"
                r"unrestricted|unfiltered|evil|malicios\w+)\b"),
-    re.compile(r"\bignor[ae]r?\s+(?:todas?\s+)?(?:las\s+|tus\s+|esas\s+)?"
-               r"(?:reglas|instrucciones|directrices|restricciones)\b"),
-    re.compile(r"\b(?:you|voce)\s+(?:have|has|tem|possui)\s+(?:no|zero|nenhuma|nenhum)\s+"
-               r"(?:restrictions|rules|limits|filters|restricoes|regras|limites|filtros)\b"),
-    re.compile(r"(?m)^\s*(?:#+\s*)?(?:system|sistema|developer)\s*:\s*.{0,30}"
-               r"\b(?:new|novas?|nuevas?)\s+(?:instructions?|instrucoes|instrucciones|regras|rules)\b"
-               r".{0,40}\b(?:reveal|ignore|ignora|override|forget|disregard|revele|esqueca|show|mostre|print)\b"),
 )
 
 _PEDIDOS_PROMPT = (
@@ -223,20 +213,6 @@ _PEDIDOS_PROMPT = (
                r"verbatim|na\s+integra)"),
     re.compile(r"\b(?:repeat|repita|reescreva)\b.{0,20}\b(?:everything|tudo|text|texto)\b"
                r".{0,15}\b(?:above|acima)\b"),
-    re.compile(r"\b(?:repeat|output|print|show|display|echo|repita|mostre|imprima)\b.{0,25}"
-               r"\b(?:everything|all|the\s+(?:words|text|content)|tudo|as\s+palavras|o\s+texto)\b"
-               r".{0,20}\b(?:above|before\s+this|so\s+far|acima|antes\s+desta)\b"
-               r"(?!\s+(?:the|a|an|o|os|as|do|da|dos|das|de|um|uma)\b)"),
-    re.compile(r"\bwhat\s+(?:were|was)\s+you\s+(?:told|instructed|given)\s+"
-               r"(?:before|earlier|at\s+the\s+start|initially)\b"),
-    re.compile(r"\b(?:comece|inicie|start|begin)\b.{0,30}\b(?:texto\s+exato|exact\s+text|verbatim|literalmente)\b"
-               r".{0,30}\b(?:instruc\w+|regras|instructions|rules|prompt)"),
-    re.compile(r"\b(?:traduz\w*|resum\w*|liste|enumere|translate|summari[sz]e|list)\b.{0,30}"
-               r"\b(?:suas|seus|your)\s+(?:system\s*)?(?:instruc\w+|regras|diretrizes|instructions|rules|guidelines)"),
-    re.compile(r"\b(?:instruc\w+|regras|instructions|rules)\s+(?:que\s+)?"
-               r"(?:voce\s+recebeu|you\s+(?:received|were\s+given))"),
-    re.compile(r"\b(?:sua|suas|your|its)\s+(?:configuracao|config|configuration)\s+"
-               r"(?:interna|oculta|internal|hidden)\b"),
 )
 
 _LIMITE_IMPERATIVO = 300
@@ -319,7 +295,7 @@ _SEGREDOS_COM_PREFIXO = (
 _CHAVE_PRIVADA = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\Z)", re.DOTALL
 )
-_URL_COM_SENHA = re.compile(r"\b([a-z][a-z0-9+.-]{0,31}://[^\s:/@]+:)([^\s@/]+)(@)", re.IGNORECASE)
+_URL_COM_SENHA = re.compile(r"\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)([^\s@/]+)(@)", re.IGNORECASE)
 _ATRIBUICAO = re.compile(
     r"(?i)\b(password|passwd|senha|secret|client_secret|api[_-]?key|apikey|"
     r"access[_-]?token|auth[_-]?token|token|private[_-]?key)\b(\s*[:=]\s*)(['\"]?)([^\s'\";,]{8,})\3"

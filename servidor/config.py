@@ -1,6 +1,5 @@
 import os
 import logging
-from urllib.parse import urlsplit
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -16,15 +15,8 @@ def _env_int(nome: str, padrao: int) -> int:
         return padrao
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAVE_PLACEHOLDER = "gsk_COLOQUE_SUA_CHAVE_AQUI"
-
-def chave_groq_configurada() -> bool:
-    return bool(GROQ_API_KEY) and GROQ_API_KEY != CHAVE_PLACEHOLDER
-
-def restringir_logs_de_terceiros() -> None:
-    for nome in ("groq", "httpx", "httpcore"):
-        logging.getLogger(nome).setLevel(logging.WARNING)
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_TIMEOUT = _env_int("GROQ_TIMEOUT", 30)
 
 _MODELOS_PADRAO = "openai/gpt-oss-120b,openai/gpt-oss-20b"
 _modelos = {m.strip() for m in os.environ.get("ALLOWED_MODELS", _MODELOS_PADRAO).split(",") if m.strip()}
@@ -54,38 +46,9 @@ def _origens_padrao() -> str:
             return ",".join(urls)
     return "http://localhost:5000"
 
-def normalizar_origens(brutas: list[str]) -> list[str]:
-    validas: list[str] = []
-    for bruta in brutas:
-        origem = bruta.strip().rstrip("/")
-        partes = urlsplit(origem)
-        invalida = (origem in ("*", "null") or partes.scheme not in ("http", "https") or not partes.netloc
-                    or bool(partes.path or partes.query or partes.fragment or partes.username))
-        if invalida:
-            logger.error("ALLOWED_ORIGINS: entrada invalida descartada (%.40r). Use origens exatas, "
-                         "como https://seu-dominio.com.", bruta)
-        elif origem not in validas:
-            validas.append(origem)
-    return validas
-
-ALLOWED_ORIGINS = normalizar_origens(os.environ.get("ALLOWED_ORIGINS", _origens_padrao()).split(","))
-
-CHAVES_SECRETAS_FRACAS = frozenset({"changeme", "secret", "senha", "password", "dev", "test", "troque", "coloque",
-                                    "example", "exemplo"})
-
-def validar_secret_key(valor: str, producao: bool) -> str | None:
-    if not valor:
-        return None
-    fraca = len(valor) < 32 or len(set(valor)) < 8 or valor.lower() in CHAVES_SECRETAS_FRACAS
-    if fraca and producao:
-        logger.error("SECRET_KEY fraca em producao: ignorada (o app nao usa sessao). "
-                     "Use 32 ou mais caracteres aleatorios.")
-        return None
-    if fraca:
-        logger.warning("SECRET_KEY fraca: aceitavel so em desenvolvimento.")
-    return valor
-
-SECRET_KEY = validar_secret_key(os.environ.get("SECRET_KEY", ""), IS_PRODUCTION)
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _origens_padrao()).split(",") if o.strip()
+]
 
 RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
@@ -96,15 +59,9 @@ MAX_HISTORY_SIZE = 16
 
 MAX_HISTORY_CHARS = 12000
 
-BYTES_POR_CARACTERE = 4
-MAX_REQUEST_SIZE = BYTES_POR_CARACTERE * (MAX_INPUT_LENGTH + MAX_HISTORY_CHARS) + 16 * 1024
+MAX_REQUEST_SIZE = 32 * 1024
 
-def calcular_timeout_llm(timeout_bruto: int, tentativas_extras: int, prazo_total: int) -> int:
-    return max(5, min(timeout_bruto, prazo_total // (tentativas_extras + 1)))
-
-GROQ_MAX_RETRIES = max(0, min(_env_int("GROQ_MAX_RETRIES", 1), 3))
-PRAZO_TOTAL_LLM = _env_int("PRAZO_TOTAL_LLM", 25)
-GROQ_TIMEOUT = calcular_timeout_llm(_env_int("GROQ_TIMEOUT", 30), GROQ_MAX_RETRIES, PRAZO_TOTAL_LLM)
+GROQ_MAX_RETRIES = _env_int("GROQ_MAX_RETRIES", 1)
 
 CHAT_ENABLED = os.environ.get("CHAT_ENABLED", "true").strip().lower() != "false"
 RATE_LIMIT_DEFAULT = "60 per minute"
@@ -117,18 +74,9 @@ MAX_CONCURRENT_REQUESTS = _env_int("MAX_CONCURRENT_REQUESTS", 4)
 
 RATE_LIMIT_GLOBAL = os.environ.get("RATE_LIMIT_GLOBAL", "300 per hour")
 
-def limite_orcamento(valor: int, producao: bool) -> int:
-    """Em producao o teto diario nunca fica desligado: valor invalido vira o padrao."""
-    if producao and valor <= 0:
-        logger.error("ORCAMENTO_DIARIO_TOKENS=%s invalido em producao: usando o padrao 1000000.", valor)
-        return 1000000
-    return valor
-
-ORCAMENTO_DIARIO_TOKENS = limite_orcamento(_env_int("ORCAMENTO_DIARIO_TOKENS", 1000000), IS_PRODUCTION)
-
 def validar_configuracao():
     """Valida a configuracao e avisa sobre riscos de seguranca no boot."""
-    if not chave_groq_configurada():
+    if not GROQ_API_KEY or GROQ_API_KEY == "gsk_COLOQUE_SUA_CHAVE_AQUI":
         logger.warning("⚠️ AVISO: Chave da Groq nao encontrada. O bot vai rodar em modo de teste.")
 
     if FORCE_HTTPS and TRUSTED_PROXY_COUNT == 0:

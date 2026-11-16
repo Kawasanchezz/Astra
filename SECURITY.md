@@ -18,7 +18,6 @@ A segurança deste projeto e dos dados de quem o utiliza é prioridade. Este doc
 - [Cabeçalhos de segurança](#cabeçalhos-de-segurança)
 - [Antes de cada deploy](#antes-de-cada-deploy)
 - [Como testar como um estranho](#como-testar-como-um-estranho)
-- [Auditoria de segurança (etapas E1–E9)](#auditoria-de-segurança-etapas-e1e9)
 - [Se o projeto ganhar backend, login ou formulário](#se-o-projeto-ganhar-backend-login-ou-formulário)
 - [Reconhecimento](#reconhecimento)
 
@@ -254,55 +253,6 @@ Se usar Google Fonts, acrescente `https://fonts.googleapis.com` em `style-src` e
 - Verifique se erros não exibem stack trace nem caminhos internos.
 - Tente acessar `/.env`, `/.git/config` e arquivos de backup na URL publicada: deve retornar 404.
 
-## Auditoria de segurança (etapas E1–E9)
-
-Revisão feita sobre o próprio código, com correções e testes automatizados (o LLM é sempre simulado nos testes; nenhum teste chama a API real). **Isto não é uma garantia de que o sistema seja seguro**: é o registro do que foi corrigido, do que foi medido e do que continua em aberto.
-
-### O que foi corrigido
-
-| Área | Problema | Correção |
-| --- | --- | --- |
-| Entrada | Regex com custo quadratico (`_URL_COM_SENHA`) permitia DoS; JSON muito aninhado dava 500; mensagem só com caracteres invisíveis passava; 413 incorreto com texto multibyte; surrogates quebravam a chamada | Regex limitada, `RecursionError` vira 400, sanitização antes da checagem de vazio, limite de corpo calculado em bytes, remoção de surrogates |
-| Abuso | Sem teto de gasto, sem limite na API do RAG nem no gateway Java | Orçamento diário de tokens, limites por IP/dia/global, semáforo de concorrência, `RateLimitFilter` (30/min por IP) no gateway |
-| Erros da LLM | Falhas viravam 200 com texto de erro; timeout×retries podia passar do limite da Vercel | HTTP próprio por falha (400/429/502/503/504, `Retry-After`), prazo total derivado, resposta vazia vira 502 |
-| Injeção de prompt | Guarda com lacunas; trechos recuperados do RAG podiam forjar o delimitador | Guarda ampliada (66 testes originais mantidos), delimitador aleatório por requisição, prompt versionado |
-| Saída | DOMPurify permissivo (forms, img, svg, style); imagem markdown servia para exfiltrar dados | Configuração restrita, remoção de imagens fora de blocos de código, 22 testes de XSS no navegador |
-| Web | Cookie e `SECRET_KEY` sem validação, CORS sem validar origens, CSP incompleta, cabeçalho `Server` com versão, gateway Java sem cabeçalhos | `SECRET_KEY` forte exigida em produção, origens exatas, cookie `HttpOnly`/`SameSite`/`Secure`/`__Host-`, CSP e Permissions-Policy completas, `SecurityHeadersFilter` no Java |
-| Logs | Sem id de correlação no Flask; id do cliente aceitava `\n` (injeção de linha no log); segredo podia ir parar no log | `X-Request-ID` em toda resposta, `fullmatch` no id, filtro que mascara chave, token e e-mail; erros sem traceback nem caminho |
-| Dependências | Instalação sem versão nem hash na imagem; base Docker por tag; `pytest` na imagem; Dependabot só em pip; bandit B613 (caracteres bidi literais) | `requirements-rag.lock` com hashes e `--require-hashes`, bases por digest, `requirements-dev.txt`, Dependabot em pip/maven/docker/actions, escapes no lugar de literais invisíveis |
-| Segredos | Risco de commitar `servidor/.env` | `.gitignore`, `.dockerignore`, `.gitleaks.toml`, `.env.example` sem valores; histórico sem vazamentos |
-
-### Como repetir a validação
-
-```bash
-pip install -r requirements-dev.txt && playwright install chromium
-ruff check .                                   # lint
-mypy servidor                                  # tipos
-pytest -q                                      # ~433 testes (inclui abuso, injeção, XSS no navegador; com CI=true, falha sem navegador)
-bandit -r servidor app.py -ll                  # análise estática (0 High/Medium)
-pip-audit -r requirements.txt                  # CVEs
-pip-audit -r requirements-rag.lock --no-deps --disable-pip
-gitleaks git --config .gitleaks.toml           # histórico (gitleaks dir . também acusa o servidor/.env local, que não é versionado)
-cd ai-gateway-java && mvn test                 # 34 testes do gateway (ou via Docker, maven:3.9-eclipse-temurin-21)
-```
-
-Testes de abuso, por arquivo: `tests/test_abuso.py` (entradas extremas, requisições em massa, orçamento), `tests/test_injection.py` e `tests/test_seguranca.py` (injeção de prompt e vazamento do prompt de sistema), `tests/test_saida_front.py` (XSS no navegador), `tests/test_web.py` (cabeçalhos, cookies, CORS, erros), `tests/test_logs.py`, `tests/test_supply.py`.
-
-### Riscos que permanecem
-
-- **Injeção de prompt não é eliminável.** A guarda é heurística: 5 variantes conhecidas passam e estão marcadas como `xfail(strict=True)` (avó/roleplay, ROT13, chinês, "modo desenvolvedor", entre outras). Um atacante criativo pode contorná-la. O que limita o dano é a arquitetura (o modelo não tem ferramentas nem acesso a dados privados), não a guarda.
-- **Alucinação.** O modelo pode responder errado com confiança. No RAG, a última avaliação (`docs/avaliacao.md`) acertou a fonte em 7 de 8 casos esperados; trate respostas como apoio, não como fonte final.
-- **Detecção de vazamento do prompt** compara 8 palavras seguidas; paráfrase ou tradução passam. O prompt de sistema não contém segredos.
-- **Contadores em memória** (`memory://`): por processo, zerados a cada deploy e não compartilhados entre instâncias. Poucos IPs podem esgotar o limite global.
-- **O histórico da conversa vem do cliente** e pode ser forjado (o limite de tamanho e a guarda se aplicam a ele, mas o conteúdo não é confiável).
-- **Sem sessão nem login**: por isso não há CSRF a mitigar. Se isso mudar, será preciso token CSRF e revisão de autorização.
-- **Cabeçalho `Server`** não pode ser removido sob gunicorn/Vercel. O log de acesso do servidor WSGI fica fora do filtro de segredos.
-- **Dependências:** o `requirements.txt` da Vercel usa faixas (piso e teto), não versões exatas; o lock com hashes vale só para a imagem do RAG e é regenerado à mão. O CI roda pip-audit, bandit, lint, tipos, testes (Python e Java) e Trivy nas duas imagens.
-- **Spring Framework 6.2.19 no gateway (CRÍTICO): resolvido** na migração para Spring Boot 4.1.2 (Spring Framework 7.0.10). Ver a seção de veredito.
-- **bandit:** 6 achados Low em `servidor/servidor_seguro.py`, lançador só de Windows (risco aceito).
-- **Chave exposta:** a chave Groq de `servidor/.env` apareceu sem máscara numa transcrição local; deve ser revogada e rotacionada no painel da Groq (não é algo que o código resolve).
-- Nada disso foi testado contra um ambiente de produção real (Vercel, proxy TLS); a verificação ao vivo foi local.
-
 ## Se o projeto ganhar backend, login ou formulário
 
 Os itens 4 a 17 passam a ser obrigatórios. Em especial:
@@ -321,41 +271,3 @@ Os itens 4 a 17 passam a ser obrigatórios. Em especial:
 Reconhecemos publicamente, no security advisory, quem reportar uma vulnerabilidade válida, salvo se preferir permanecer anônimo. Informe sua preferência no relato.
 
 Este projeto **não mantém programa de recompensa financeira (bug bounty)**; o reconhecimento é por crédito público e agradecimento.
-
-### Veredito da auditoria (E9)
-
-**Aprovada com ressalvas.** Todos os critérios têm evidência, exceto dois itens que dependem de ações fora do código: a revogação da chave antiga da Groq (ação sua no painel da Groq) e a confirmação de que o CI do GitHub está verde nesta versão (não consigo ler o log remoto). Isso não significa que o sistema seja invulnerável.
-
-| Critério | Situação | Evidência |
-| --- | --- | --- |
-| Testes obrigatórios passam | Cumprido | `pytest -q`: 433 passed, 1 skipped, 5 xfailed. Os 5 xfailed são variantes de injeção conhecidas, não testes desabilitados |
-| Nenhum teste desabilitado | Cumprido | Nenhum `skip` novo para esconder falha. O fixture de navegador passou a falhar no CI em vez de pular |
-| Nenhuma chave ativa exposta no código ou histórico | Cumprido no código; **pendente no painel** | `gitleaks git`: no leaks found. A chave antiga precisa ser revogada pelo mantenedor |
-| Nenhuma vulnerabilidade crítica ou alta sem tratamento | Cumprido | Trivy nas duas imagens: 0 achados CRITICAL/HIGH com correção disponível. Spring Framework 6.2.19 resolvido na migração para Spring Boot 4 |
-| Nenhum problema conhecido de isolamento entre usuários | Cumprido com ressalva | Conversas do front isoladas por chat (E2). Contadores são por processo (ver riscos) |
-| Nenhum problema crítico de consumo sem mitigação | Parcial | Teto diário e limites por IP existem e são barrados em produção sem teto (E4). Contadores não são globais entre instâncias |
-| Nenhuma falha de XSS conhecida | Cumprido | 22 testes de XSS no navegador passam (`test_saida_front.py`) |
-| Nenhuma configuração insegura de produção sem justificativa | Cumprido | Trava de `SECRET_KEY`, origem, orçamento e `RAG_API_TOKEN` em produção |
-| Nenhum scanner escondido | Cumprido | Trivy e bandit rodam no CI sem `ignore` para os achados; o `.trivyignore` não existe |
-| Riscos residuais documentados | Cumprido | Esta seção |
-
-#### Evidências desta rodada (E9)
-
-- `ruff check .`: All checks passed.
-- `mypy servidor`: Success, 25 arquivos.
-- `bandit -r servidor app.py -ll`: 0 High, 0 Medium (6 Low em `servidor/servidor_seguro.py`, lançador de Windows).
-- `pip-audit -r requirements.txt` e `pip-audit -r requirements-rag.lock --no-deps --disable-pip`: No known vulnerabilities found.
-- `gitleaks git`: no leaks found.
-- Trivy, imagem RAG: sem achados CRITICAL/HIGH com correção disponível.
-- Trivy, imagem do gateway (Spring Boot 4.1.2): `app/app.jar` com 0 vulnerabilidades; base Ubuntu com 0.
-- Java (Spring Boot 4.1.2): `mvn test`, 35 testes, BUILD SUCCESS. Gateway em container: `/actuator/health` UP, `/v3/api-docs` 200.
-- Linux com `CI=true` e Chromium: 433 passed, 1 skipped, 5 xfailed.
-- Ao vivo (servidor local, sem chamadas à Groq): corpo de 5 MB → 413; JSON com 5000 níveis → 400; tipos errados → 400; rajada além do limite → 429 a partir da 6ª requisição; cabeçalhos presentes; 404 e 405 em JSON; nenhum `gsk_` nem `Traceback` no log.
-
-#### Desvio desta rodada
-
-Durante a verificação ao vivo, uma requisição com caracteres invisíveis foi enviada à Groq com a chave local de teste (fictícia). A API respondeu 401 (`AuthenticationError`), registrado como `credencial_recusada`. Não houve cobrança nem vazamento. A causa foi a forma como o shell do Windows transmitiu os bytes do corpo da requisição, o que impediu que o caso fosse testado como pretendido. O mesmo caso foi reproduzido sem rede com o test client, e retornou 400.
-
-#### Como o teste ao vivo deve ser feito
-
-Para não repetir o desvio acima: use `ia.client = None` (modo demo) ou a suíte com a API simulada, e não um servidor com chave real ou fictícia. Mande corpos com `printf` para arquivo, e não pela linha de comando do Windows.

@@ -1,4 +1,3 @@
-import json
 import os
 import logging
 import mimetypes
@@ -6,27 +5,25 @@ import signal
 import sys
 import threading
 from urllib.parse import urlsplit
-from flask import Flask, g, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.serving import WSGIRequestHandler
 
 from config import (
-    ALLOWED_ORIGINS, FLASK_DEBUG, PORT, SECRET_KEY,
+    ALLOWED_ORIGINS, FLASK_DEBUG, PORT,
     MAX_REQUEST_SIZE, RATE_LIMIT_DEFAULT, RATE_LIMIT_CHAT, RATE_LIMIT_DIARIO,
     MAX_INPUT_LENGTH, RATELIMIT_STORAGE_URI, FORCE_HTTPS, RATE_LIMIT_GLOBAL,
-    TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, chave_groq_configurada,
+    TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, GROQ_API_KEY,
     CHAT_ENABLED, GROQ_MAX_RETRIES, MAX_HISTORY_CHARS, MAX_CONCURRENT_REQUESTS,
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
-from core.logs import configurar_logs, id_atual, novo_id
 from core.prompt_mestre import PromptMestre
-from services.ia_service import FalhaLlm, obter_resposta_ia, sanitizar_input
+from services.ia_service import obter_resposta_ia
 
-configurar_logs()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 
 validar_configuracao()
@@ -44,7 +41,7 @@ app = Flask(__name__,
             static_url_path="")
 
 if TRUSTED_PROXY_COUNT > 0:
-    app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
+    app.wsgi_app = ProxyFix(
         app.wsgi_app,
         x_for=TRUSTED_PROXY_COUNT,
         x_proto=TRUSTED_PROXY_COUNT,
@@ -55,14 +52,6 @@ if TRUSTED_PROXY_COUNT > 0:
 else:
     logger.info("ProxyFix desativado: X-Forwarded-* ignorado (IP real do socket).")
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_SIZE
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=FORCE_HTTPS or IS_PRODUCTION,
-    SESSION_COOKIE_NAME="__Host-astra" if (FORCE_HTTPS or IS_PRODUCTION) else "astra",
-)
-if SECRET_KEY:
-    app.secret_key = SECRET_KEY
 
 CORS(app, origins=ALLOWED_ORIGINS, methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type"], supports_credentials=False, max_age=600)
@@ -71,8 +60,7 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=[RATE_LIMIT_DEFAULT],
-    storage_uri=RATELIMIT_STORAGE_URI,
-    headers_enabled=True
+    storage_uri=RATELIMIT_STORAGE_URI
 )
 
 system_prompt = PromptMestre().get_prompt()
@@ -90,7 +78,6 @@ def enforce_https():
         host = _HOSTS_PERMITIDOS_POR_NOME.get(request.host, _HOSTS_PERMITIDOS[0])
         caminho = _CAMINHOS_REDIRECIONAVEIS.get(request.path, "/")
         return redirect(f"https://{host}{caminho}", code=301)
-    return None
 
 _EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
                          ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",
@@ -102,29 +89,14 @@ def bloquear_arquivos_sensiveis():
     partes = [p for p in caminho.split("/") if p]
     if any(p.startswith(".") for p in partes) or caminho.endswith(_EXTENSOES_BLOQUEADAS):
         return jsonify({"erro": "Nao encontrado"}), 404
-    return None
-
-def _politica_de_cache(response):
-    if request.endpoint == "static" and response.status_code in (200, 304):
-        return "public, max-age=31536000, immutable" if request.args.get("v") else "no-cache"
-    if response.mimetype == "text/html":
-        return "no-cache"
-    return "no-store"
 
 @app.after_request
 def security_headers(response):
-    response.headers["X-Request-ID"] = id_atual()
-    response.vary.add("Origin")
-    if response.status_code >= 400 and response.is_json:
-        corpo = response.get_json(silent=True)
-        if isinstance(corpo, dict):
-            corpo.setdefault("id", id_atual())
-            response.set_data(json.dumps(corpo, ensure_ascii=False))
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Cache-Control"] = _politica_de_cache(response)
+    response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self), payment=(), usb=()"
+    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
@@ -140,18 +112,9 @@ def security_headers(response):
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
-        "frame-ancestors 'none'; "
-        "frame-src 'none'; "
-        "worker-src 'none'; "
-        "media-src 'none'; "
-        "manifest-src 'self'"
-        + ("; upgrade-insecure-requests" if (FORCE_HTTPS or IS_PRODUCTION) else "")
+        "frame-ancestors 'none'"
     )
     return response
-
-@app.before_request
-def iniciar_requisicao():
-    g.id = novo_id(request.headers.get("X-Request-ID", ""))
 
 @app.route("/")
 def index():
@@ -187,10 +150,7 @@ def chat():
         if origem not in ALLOWED_ORIGINS and origem != mesmo_site:
             return jsonify({"erro": "Origem nao permitida"}), 403
 
-    try:
-        dados = request.get_json(silent=True)
-    except RecursionError:
-        dados = None
+    dados = request.get_json(silent=True)
 
     if not dados or not isinstance(dados, dict):
         return jsonify({"erro": "Dados invalidos"}), 400
@@ -198,7 +158,7 @@ def chat():
     mensagem = dados.get("mensagem", "")
     if not isinstance(mensagem, str):
         return jsonify({"erro": "Dados invalidos"}), 400
-    mensagem = sanitizar_input(mensagem)
+    mensagem = mensagem.strip()
     if not mensagem:
         return jsonify({"erro": "Mensagem vazia"}), 400
 
@@ -227,11 +187,6 @@ def chat():
 
     try:
         resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo, idioma)
-    except FalhaLlm as falha:
-        resposta_erro = jsonify({"erro": falha.mensagem})
-        if falha.retry_apos:
-            resposta_erro.headers["Retry-After"] = str(falha.retry_apos)
-        return resposta_erro, falha.status
     finally:
         _vagas_ia.release()
 
@@ -252,7 +207,7 @@ def limites():
 @app.route("/health")
 def health():
     if IS_PRODUCTION:
-        return jsonify({"status": "Online e Seguro!", "ia_configurada": chave_groq_configurada()})
+        return jsonify({"status": "Online e Seguro!", "ia_configurada": bool(GROQ_API_KEY)})
     return jsonify({
         "status": "Online e Seguro!",
         "ambiente": APP_ENV,
@@ -265,7 +220,7 @@ def health():
         "max_request_kb": MAX_REQUEST_SIZE // 1024,
         "groq_max_retries": GROQ_MAX_RETRIES,
         "max_concorrencia": MAX_CONCURRENT_REQUESTS,
-        "ia_configurada": chave_groq_configurada(),
+        "ia_configurada": bool(GROQ_API_KEY),
     })
 
 @app.errorhandler(413)
@@ -292,16 +247,12 @@ def erro_inesperado(e):
     logger.error("Excecao nao tratada: %s", type(e).__name__)
     return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
 
-def graceful_shutdown(_sinal, _quadro):
+def graceful_shutdown(sig, frame):
     logger.info("Desligando o servidor...")
     sys.exit(0)
-
-class ManipuladorSemVersoes(WSGIRequestHandler):
-    def version_string(self) -> str:
-        return "Astra"
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, graceful_shutdown)
     signal.signal(signal.SIGTERM, graceful_shutdown)
     logger.info("Bot rodando na porta %d", PORT)
-    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=PORT, request_handler=ManipuladorSemVersoes)
+    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=PORT)

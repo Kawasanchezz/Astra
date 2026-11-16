@@ -235,12 +235,3 @@ Desktop.ini
 ehthumbs.db
 $RECYCLE.BIN/
 *.local
-
-# --- Java / Maven (gateway) ---
-target/
-*.class
-*.iml
-.mvn/wrapper/maven-wrapper.jar
-
-# --- ferramentas Python ---
-.dmypy.json
