@@ -278,7 +278,7 @@ Revisão feita sobre o próprio código, com correções e testes automatizados 
 pip install -r requirements-dev.txt && playwright install chromium
 ruff check .                                   # lint
 mypy servidor                                  # tipos
-pytest -q                                      # ~420 testes (inclui abuso, injeção, XSS no navegador)
+pytest -q                                      # ~433 testes (inclui abuso, injeção, XSS no navegador; com CI=true, falha sem navegador)
 bandit -r servidor app.py -ll                  # análise estática (0 High/Medium)
 pip-audit -r requirements.txt                  # CVEs
 pip-audit -r requirements-rag.lock --no-deps --disable-pip
@@ -297,7 +297,8 @@ Testes de abuso, por arquivo: `tests/test_abuso.py` (entradas extremas, requisi�
 - **O histórico da conversa vem do cliente** e pode ser forjado (o limite de tamanho e a guarda se aplicam a ele, mas o conteúdo não é confiável).
 - **Sem sessão nem login**: por isso não há CSRF a mitigar. Se isso mudar, será preciso token CSRF e revisão de autorização.
 - **Cabeçalho `Server`** não pode ser removido sob gunicorn/Vercel. O log de acesso do servidor WSGI fica fora do filtro de segredos.
-- **Dependências:** o `requirements.txt` da Vercel usa faixas (piso e teto), não versões exatas; o lock com hashes vale só para a imagem do RAG e é regenerado à mão. Não há scanner de CVEs das imagens Docker nem do Maven. O CI roda auditoria e bandit, mas não os testes.
+- **Dependências:** o `requirements.txt` da Vercel usa faixas (piso e teto), não versões exatas; o lock com hashes vale só para a imagem do RAG e é regenerado à mão. O CI roda pip-audit, bandit, lint, tipos, testes (Python e Java) e Trivy nas duas imagens.
+- **Spring Framework 6.2.19 no gateway (CRÍTICO, aberto):** `CVE-2026-47884` e `CVE-2026-47890` só têm correção na linha 7.0.9, que exige Spring Boot 4. O código não usa XSLT, SSE nem `View`, mas o componente continua na imagem e o job `imagens` do CI fica vermelho até a migração ou uma aceitação de risco documentada.
 - **bandit:** 6 achados Low em `servidor/servidor_seguro.py`, lançador só de Windows (risco aceito).
 - **Chave exposta:** a chave Groq de `servidor/.env` apareceu sem máscara numa transcrição local; deve ser revogada e rotacionada no painel da Groq (não é algo que o código resolve).
 - Nada disso foi testado contra um ambiente de produção real (Vercel, proxy TLS); a verificação ao vivo foi local.
@@ -320,3 +321,41 @@ Os itens 4 a 17 passam a ser obrigatórios. Em especial:
 Reconhecemos publicamente, no security advisory, quem reportar uma vulnerabilidade válida, salvo se preferir permanecer anônimo. Informe sua preferência no relato.
 
 Este projeto **não mantém programa de recompensa financeira (bug bounty)**; o reconhecimento é por crédito público e agradecimento.
+
+### Veredito da auditoria (E9)
+
+**Não aprovada.** Um critério da auditoria não está cumprido: "nenhuma vulnerabilidade crítica conhecida permanece sem tratamento" (Spring Framework 6.2.19, ver acima). Os demais critérios têm evidência na tabela abaixo. Isso não significa que o sistema seja invulnerável.
+
+| Critério | Situação | Evidência |
+| --- | --- | --- |
+| Testes obrigatórios passam | Cumprido | `pytest -q`: 433 passed, 1 skipped, 5 xfailed. Os 5 xfailed são variantes de injeção conhecidas, não testes desabilitados |
+| Nenhum teste desabilitado | Cumprido | Nenhum `skip` novo para esconder falha. O fixture de navegador passou a falhar no CI em vez de pular |
+| Nenhuma chave ativa exposta no código ou histórico | Cumprido no código; **pendente no painel** | `gitleaks git`: no leaks found. A chave antiga precisa ser revogada pelo mantenedor |
+| Nenhuma vulnerabilidade crítica ou alta sem tratamento | **Não cumprido** | Spring Framework 6.2.19 (crítica, aberta). Tomcat, Jackson, zlib e pip da imagem foram tratados |
+| Nenhum problema conhecido de isolamento entre usuários | Cumprido com ressalva | Conversas do front isoladas por chat (E2). Contadores são por processo (ver riscos) |
+| Nenhum problema crítico de consumo sem mitigação | Parcial | Teto diário e limites por IP existem e são barrados em produção sem teto (E4). Contadores não são globais entre instâncias |
+| Nenhuma falha de XSS conhecida | Cumprido | 22 testes de XSS no navegador passam (`test_saida_front.py`) |
+| Nenhuma configuração insegura de produção sem justificativa | Cumprido | Trava de `SECRET_KEY`, origem, orçamento e `RAG_API_TOKEN` em produção |
+| Nenhum scanner escondido | Cumprido | Trivy e bandit rodam no CI sem `ignore` para os achados; o `.trivyignore` não existe |
+| Riscos residuais documentados | Cumprido | Esta seção |
+
+#### Evidências desta rodada (E9)
+
+- `ruff check .`: All checks passed.
+- `mypy servidor`: Success, 25 arquivos.
+- `bandit -r servidor app.py -ll`: 0 High, 0 Medium (6 Low em `servidor/servidor_seguro.py`, lançador de Windows).
+- `pip-audit -r requirements.txt` e `pip-audit -r requirements-rag.lock --no-deps --disable-pip`: No known vulnerabilities found.
+- `gitleaks git`: no leaks found.
+- Trivy, imagem RAG: sem achados CRITICAL/HIGH com correção disponível.
+- Trivy, imagem do gateway: 2 CRITICAL (`spring-webmvc` 6.2.19).
+- Java: `mvn test`, 35 testes, BUILD SUCCESS.
+- Linux com `CI=true` e Chromium: 433 passed, 1 skipped, 5 xfailed.
+- Ao vivo (servidor local, sem chamadas à Groq): corpo de 5 MB → 413; JSON com 5000 níveis → 400; tipos errados → 400; rajada além do limite → 429 a partir da 6ª requisição; cabeçalhos presentes; 404 e 405 em JSON; nenhum `gsk_` nem `Traceback` no log.
+
+#### Desvio desta rodada
+
+Durante a verificação ao vivo, uma requisição com caracteres invisíveis foi enviada à Groq com a chave local de teste (fictícia). A API respondeu 401 (`AuthenticationError`), registrado como `credencial_recusada`. Não houve cobrança nem vazamento. A causa foi a forma como o shell do Windows transmitiu os bytes do corpo da requisição, o que impediu que o caso fosse testado como pretendido. O mesmo caso foi reproduzido sem rede com o test client, e retornou 400.
+
+#### Como o teste ao vivo deve ser feito
+
+Para não repetir o desvio acima: use `ia.client = None` (modo demo) ou a suíte com a API simulada, e não um servidor com chave real ou fictícia. Mande corpos com `printf` para arquivo, e não pela linha de comando do Windows.
