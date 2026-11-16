@@ -1,0 +1,17 @@
+# Contexto do Dockerfile.rag: só entra o que o serviço Python precisa.
+.git
+.github
+.venv
+.cache
+promo
+landing-page
+ai-gateway-java
+avaliacao
+tests
+**/__pycache__
+**/*.pyc
+
+# Segredos nunca entram na imagem (a chave chega por variável de ambiente).
+**/.env
+**/.env.*
+!**/.env.example

@@ -1,0 +1,27 @@
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HUB_DISABLE_SYMLINKS_WARNING=1
+
+WORKDIR /app
+
+COPY requirements.txt requirements-rag.txt ./
+RUN pip install -r requirements-rag.txt
+
+COPY servidor servidor
+COPY docs docs
+COPY prompts prompts
+
+# O modelo de embeddings (~220 MB) e o índice entram na imagem: o contêiner sobe sem baixar nada.
+WORKDIR /app/servidor
+RUN python -m rag indexar
+
+RUN useradd --system --uid 10001 --no-create-home app && chown -R app /app/.cache
+USER app
+
+ENV RAG_API_HOST=0.0.0.0 RAG_API_PORT=8000
+EXPOSE 8000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"
+CMD ["gunicorn", "--workers", "1", "--threads", "4", "--timeout", "60", "--bind", "0.0.0.0:8000", "rag.wsgi:app"]
