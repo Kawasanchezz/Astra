@@ -108,11 +108,18 @@ if (typeof DOMPurify !== 'undefined') {
   });
 }
 
+const CONFIG_SANITIZACAO = {
+  FORBID_TAGS: ['img', 'form', 'input', 'button', 'textarea', 'select', 'option', 'style', 'link', 'meta', 'base',
+    'iframe', 'object', 'embed', 'svg', 'math', 'video', 'audio', 'source', 'picture', 'script'],
+  FORBID_ATTR: ['style', 'srcset', 'action', 'formaction'],
+  ALLOW_DATA_ATTR: false,
+};
+
 function renderMarkdown(text) {
   if (typeof marked === 'undefined') return escapeHtml(text);
   try {
     const html = marked.parse(text);
-    return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html) : escapeHtml(text);
+    return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, CONFIG_SANITIZACAO) : escapeHtml(text);
   } catch { return escapeHtml(text); }
 }
 
