@@ -35,6 +35,58 @@ jobs:
       - name: Análise estática de segurança (bandit)
         run: pip install bandit && bandit -r servidor app.py -ll
 
+  testes:
+    name: Lint, tipos e testes do Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+      - name: Instalar dependências de desenvolvimento
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Tipos
+        run: mypy servidor
+      - name: Testes (o LLM é simulado, não usa chave real)
+        run: pytest -q
+
+  gateway-java:
+    name: Testes do gateway Java
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Testar
+        working-directory: ai-gateway-java
+        run: mvn -B test
+
+  imagens:
+    name: Imagens Docker (construir e procurar CVEs)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        imagem:
+          - { nome: astra-rag, contexto: ., arquivo: Dockerfile.rag }
+          - { nome: astra-gateway, contexto: ai-gateway-java, arquivo: ai-gateway-java/Dockerfile }
+    steps:
+      - uses: actions/checkout@v7
+      - name: Construir
+        run: docker build -f ${{ matrix.imagem.arquivo }} -t ${{ matrix.imagem.nome }}:ci ${{ matrix.imagem.contexto }}
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ matrix.imagem.nome }}:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
   codeql:
     name: Análise de segurança (CodeQL)
     runs-on: ubuntu-latest
