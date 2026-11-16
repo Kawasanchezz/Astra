@@ -1,0 +1,14 @@
+title = "Astra"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dependências, caches e bibliotecas de terceiros minificadas"
+paths = [
+    '''(^|/)\.venv/''',
+    '''(^|/)\.cache/''',
+    '''(^|/)promo/''',
+    '''(^|/)target/''',
+    '''landing-page/js/vendor/''',
+]
