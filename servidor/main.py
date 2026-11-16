@@ -114,6 +114,7 @@ def _politica_de_cache(response):
 @app.after_request
 def security_headers(response):
     response.headers["X-Request-ID"] = id_atual()
+    response.vary.add("Origin")
     if response.status_code >= 400 and response.is_json:
         corpo = response.get_json(silent=True)
         if isinstance(corpo, dict):
