@@ -295,7 +295,7 @@ _SEGREDOS_COM_PREFIXO = (
 _CHAVE_PRIVADA = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\Z)", re.DOTALL
 )
-_URL_COM_SENHA = re.compile(r"\b([a-z][a-z0-9+.-]*://[^\s:/@]+:)([^\s@/]+)(@)", re.IGNORECASE)
+_URL_COM_SENHA = re.compile(r"\b([a-z][a-z0-9+.-]{0,31}://[^\s:/@]+:)([^\s@/]+)(@)", re.IGNORECASE)
 _ATRIBUICAO = re.compile(
     r"(?i)\b(password|passwd|senha|secret|client_secret|api[_-]?key|apikey|"
     r"access[_-]?token|auth[_-]?token|token|private[_-]?key)\b(\s*[:=]\s*)(['\"]?)([^\s'\";,]{8,})\3"
