@@ -1,0 +1,11 @@
+title = "Astra"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Valores falsos usados como fixture nos testes antigos do filtro de segredos e de injecao"
+regexes = [
+    '''valor-secreto-do-ambiente-123''',
+    '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.abcdefghijk123''',
+]
