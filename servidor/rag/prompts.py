@@ -22,9 +22,9 @@ class Prompts:
     def mensagem_sistema(self) -> str:
         return "\n\n".join((self.sistema, self.regra, self.formato))
 
-    def mensagem_usuario(self, contexto: str, pergunta: str) -> str:
+    def mensagem_usuario(self, contexto: str, pergunta: str, marca: str = "") -> str:
         """O Template só substitui os marcadores do arquivo: um '$' na pergunta é texto comum."""
-        return self.contexto.substitute(contexto=contexto, pergunta=pergunta)
+        return self.contexto.substitute(contexto=contexto, pergunta=pergunta, marca=marca)
 
 def _ler(pasta: Path, nome: str) -> str:
     caminho = pasta / nome

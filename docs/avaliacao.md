@@ -23,20 +23,23 @@ Uma pergunta é **aprovada** se: recuperou o documento certo, citou a fonte cert
 inexistente, tem os termos esperados e não recusou (ou, nas 2 sem resposta, se recusou). O formato
 `【n】` não reprova a pergunta; é contado à parte.
 
-## Resultado (2 execuções, mesmos prompts `9443c9e176`, `openai/gpt-oss-120b`, k=4, score mínimo 0,35)
+## Resultado (`openai/gpt-oss-120b`, k=4, score mínimo 0,35)
 
-| | Execução 1 | Execução 2 |
-|---|---|---|
-| Perguntas aprovadas | **9 de 10** | **9 de 10** |
-| Recuperou o documento certo | 7 de 8 | 7 de 8 |
-| Documento certo em primeiro | 6 de 8 | 6 de 8 |
-| **Citou a fonte certa** | **7 de 8** | **7 de 8** |
-| Citação no formato `[n]` | 5 de 8 | 3 de 8 |
-| Termos esperados | 7 de 8 | 7 de 8 |
-| Recusou indevidamente | 1 de 8 | 1 de 8 |
-| Recusou corretamente (sem resposta no corpus) | 2 de 2 | 2 de 2 |
+Execuções 1 e 2 com os prompts `9443c9e176`. A execução 3 usa os prompts `c74f21ceea`, depois de a mensagem do usuário
+passar a delimitar os trechos com uma marca aleatória por requisição (`docs/prompts.md`, decisão 9).
 
-Resposta direta: **7 das 8 respostas citaram o contexto certo** nas duas execuções. A recuperação
+| | Execução 1 | Execução 2 | Execução 3 (novo prompt) |
+|---|---|---|---|
+| Perguntas aprovadas | **9 de 10** | **9 de 10** | **9 de 10** |
+| Recuperou o documento certo | 7 de 8 | 7 de 8 | 7 de 8 |
+| Documento certo em primeiro | 6 de 8 | 6 de 8 | 6 de 8 |
+| **Citou a fonte certa** | **7 de 8** | **7 de 8** | **7 de 8** |
+| Citação no formato `[n]` | 5 de 8 | 3 de 8 | 4 de 8 |
+| Termos esperados | 7 de 8 | 7 de 8 | 7 de 8 |
+| Recusou indevidamente | 1 de 8 | 1 de 8 | 1 de 8 |
+| Recusou corretamente (sem resposta no corpus) | 2 de 2 | 2 de 2 | 2 de 2 |
+
+Resposta direta: **7 das 8 respostas citaram o contexto certo** nas três execuções. A recuperação
 é determinística; só o texto do LLM varia entre as execuções, e o que variou foi o formato da citação.
 
 ## Falhas

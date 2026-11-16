@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from collections.abc import Callable
 
@@ -37,13 +38,15 @@ def buscar_contexto(indice: IndiceVetorial, embedder: Embedder, pergunta: str,
 def montar_mensagens(pergunta: str, encontrados: list[tuple[Trecho, float]],
                      prompts: Prompts | None = None) -> list[dict]:
     prompts = prompts or prompts_padrao()
+    marca = secrets.token_hex(6)
     blocos = []
     for numero, (trecho, _) in enumerate(encontrados, start=1):
         origem = f"{trecho.fonte} > {trecho.secao}" if trecho.secao else trecho.fonte
-        blocos.append(f"[{numero}] (fonte: {origem})\n{trecho.texto}")
+        origem = origem.replace('"', "'").replace("\n", " ")
+        blocos.append(f'<trecho-{marca} n="{numero}" fonte="{origem}">\n{trecho.texto}\n</trecho-{marca}>')
     return [
         {"role": "system", "content": prompts.mensagem_sistema},
-        {"role": "user", "content": prompts.mensagem_usuario("\n\n".join(blocos), pergunta)},
+        {"role": "user", "content": prompts.mensagem_usuario("\n\n".join(blocos), pergunta, marca)},
     ]
 
 def perguntar(pergunta: str, indice: IndiceVetorial, embedder: Embedder, llm: Llm,

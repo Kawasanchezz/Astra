@@ -42,6 +42,11 @@ Cada trecho recuperado entra como `[n] (fonte: arquivo > seção)` seguido do te
 8. **Duas recusas diferentes.** Antes do LLM, o score mínimo de similaridade (`0,35`) barra perguntas
    sem relação com o corpus, com a frase fixa do código (`SEM_CONTEXTO`) e sem gastar uma chamada.
    Depois, o modelo recusa com a frase da regra 2. A avaliação da E3 precisa contar as duas.
+9. **Marca aleatória em volta dos trechos.** Cada trecho recuperado vai entre `<trecho-MARCA>` e
+   `</trecho-MARCA>`, e a `MARCA` é gerada por requisição (6 bytes aleatórios). Um documento não sabe qual será,
+   então não consegue fechar o bloco e escrever uma "pergunta" falsa fora dele. A mensagem do usuário diz que o que
+   está entre as marcas é dado, e o texto do documento nunca entra na mensagem de sistema. Aspas e quebras de linha
+   na origem do trecho são neutralizadas para não quebrar o atributo.
 
 ## Histórico
 
@@ -49,6 +54,7 @@ Cada trecho recuperado entra como `[n] (fonte: arquivo > seção)` seguido do te
 |---|---|---|
 | v0 (E1, texto dentro de `consulta.py`) | Uma regra de duas frases: só o contexto, diga que não sabe, cite `[1]` | "O que o `@WebMvcTest` faz e como funciona o Hibernate?" → `Não sei. [1]` (recusou tudo, embora o `@WebMvcTest` esteja nos documentos) |
 | v1 (`9443c9e176`) | Prompts em arquivos; regras separadas; resposta parcial; aviso de dados vs. instruções | A mesma pergunta passou a responder o `@WebMvcTest` e dizer que o Hibernate não consta nos trechos |
+| v2 (`c74f21ceea`) | Trechos entre marcas aleatórias por requisição e aviso, na mensagem do usuário, de que o conteúdo é dado | Reavaliada (execução 3): 9 de 10 aprovadas e 7 de 8 citando a fonte certa, como na v1. Amostra pequena: não prova que a qualidade não mudou |
 
 A evidência é de 5 perguntas, uma execução cada, com temperatura 0,2: serve para guiar a mudança e
 não é uma medida de qualidade. A medição de verdade fica para a E3.

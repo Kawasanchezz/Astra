@@ -116,7 +116,7 @@ def test_prompt_leva_contexto_numerado_regra_e_pergunta():
     mensagens = montar_mensagens("O que é inner join?", [(trecho, 0.9)])
     assert mensagens[0] == {"role": "system", "content": prompts_padrao().mensagem_sistema}
     usuario = mensagens[1]["content"]
-    assert "[1] (fonte: sql.md > SQL > Joins)" in usuario
+    assert 'n="1" fonte="sql.md > SQL > Joins"' in usuario
     assert "O inner join devolve linhas em comum." in usuario
     assert usuario.rstrip().endswith("Pergunta: O que é inner join?")
 

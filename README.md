@@ -196,15 +196,15 @@ Sem JDK local, os testes Java rodam em contêiner:
 
 ### Avaliação
 
-10 perguntas fixas (8 que os documentos respondem, 2 que não), rodadas duas vezes contra o LLM real
+10 perguntas fixas (8 que os documentos respondem, 2 que não), rodadas três vezes contra o LLM real
 ([`docs/avaliacao.md`](docs/avaliacao.md)):
 
-| | Execução 1 | Execução 2 |
-|---|---|---|
-| Perguntas aprovadas | 9 de 10 | 9 de 10 |
-| Respostas que citam o documento certo | 7 de 8 | 7 de 8 |
-| Citação no formato `[n]` | 5 de 8 | 3 de 8 |
-| Recusa correta das perguntas sem resposta | 2 de 2 | 2 de 2 |
+| | Execução 1 | Execução 2 | Execução 3 (prompt v2) |
+|---|---|---|---|
+| Perguntas aprovadas | 9 de 10 | 9 de 10 | 9 de 10 |
+| Respostas que citam o documento certo | 7 de 8 | 7 de 8 | 7 de 8 |
+| Citação no formato `[n]` | 5 de 8 | 3 de 8 | 4 de 8 |
+| Recusa correta das perguntas sem resposta | 2 de 2 | 2 de 2 | 2 de 2 |
 
 É uma amostra mínima, escrita pelo próprio autor com o corpus aberto: serve para achar falhas, não para
 afirmar qualidade (veja as limitações abaixo).
