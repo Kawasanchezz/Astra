@@ -8,6 +8,7 @@ from config import (
     MAX_TOKENS_RESPOSTA, IDIOMAS
 )
 from core.seguranca import avaliar_mensagem, mascarar_segredos
+from core.orcamento import estimar_tokens, orcamento_diario
 from core.validador import validar_resposta
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,12 @@ else:
     client = None
 
 TEMPERATURA = 0.4
+
+
+class OrcamentoEsgotado(Exception):
+    def __init__(self, segundos_ate_reiniciar: int):
+        super().__init__("orcamento diario de tokens esgotado")
+        self.segundos = segundos_ate_reiniciar
 
 AVISO_SEGREDO = (
     "AVISO DO SISTEMA: a mensagem do usuario continha uma credencial real, ja "
@@ -103,6 +110,11 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
     messages.extend(validar_historico(historico))
     messages.append({"role": "user", "content": mensagem})
 
+    estimativa = sum(estimar_tokens(str(m.get("content") or "")) for m in messages) + MAX_TOKENS_RESPOSTA
+    if not orcamento_diario.reservar(estimativa):
+        logger.warning("Orcamento diario de tokens esgotado")
+        raise OrcamentoEsgotado(orcamento_diario.segundos_ate_reiniciar())
+
     try:
         modelo_ativo = modelo if (modelo and modelo in ALLOWED_MODELS) else GROQ_MODEL
 
@@ -113,8 +125,11 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
             max_tokens=MAX_TOKENS_RESPOSTA,
             timeout=GROQ_TIMEOUT
         )
+        gasto_real = getattr(getattr(resp, "usage", None), "total_tokens", None)
+        orcamento_diario.acertar(estimativa, gasto_real if isinstance(gasto_real, int) else None)
         return validar_resposta(resp.choices[0].message.content, system_prompt)
 
     except Exception as e:
+        orcamento_diario.acertar(estimativa, 0)
         logger.error("Erro na API: %s", type(e).__name__)
         return "Nao consegui responder agora. Tente em alguns segundos."

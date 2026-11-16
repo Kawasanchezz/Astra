@@ -70,6 +70,15 @@ RATE_LIMIT_DIARIO = os.environ.get("RATE_LIMIT_DIARIO", "150 per day")
 
 MAX_TOKENS_RESPOSTA = max(64, min(_env_int("MAX_TOKENS_RESPOSTA", 1024), 4096))
 
+def limite_orcamento(valor: int, producao: bool) -> int:
+    """Em producao o teto diario nunca fica desligado: valor invalido vira o padrao."""
+    if producao and valor <= 0:
+        logger.error("ORCAMENTO_DIARIO_TOKENS=%s invalido em producao: usando o padrao 1000000.", valor)
+        return 1000000
+    return valor
+
+ORCAMENTO_DIARIO_TOKENS = limite_orcamento(_env_int("ORCAMENTO_DIARIO_TOKENS", 1000000), IS_PRODUCTION)
+
 MAX_CONCURRENT_REQUESTS = _env_int("MAX_CONCURRENT_REQUESTS", 4)
 
 RATE_LIMIT_GLOBAL = os.environ.get("RATE_LIMIT_GLOBAL", "300 per hour")

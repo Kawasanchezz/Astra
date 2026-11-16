@@ -21,7 +21,7 @@ from config import (
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
 from core.prompt_mestre import PromptMestre
-from services.ia_service import obter_resposta_ia
+from services.ia_service import OrcamentoEsgotado, obter_resposta_ia
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
@@ -187,6 +187,9 @@ def chat():
 
     try:
         resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo, idioma)
+    except OrcamentoEsgotado as falha:
+        return (jsonify({"erro": "A cota diaria da IA acabou. Tente novamente amanha."}), 429,
+                {"Retry-After": str(falha.segundos)})
     finally:
         _vagas_ia.release()
 
