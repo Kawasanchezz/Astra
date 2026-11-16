@@ -95,7 +95,7 @@ def _sem_codigo(texto: str) -> str:
     t = _BLOCO_CODIGO.sub(" ", texto)
     t = _CODIGO_INLINE.sub(" ", t)
     t = _TRECHO_CITADO.sub(" ", t)
-    return "\n".join(" " if l.lstrip().startswith(_PREFIXOS_COMENTARIO) else l for l in t.split("\n"))
+    return "\n".join(" " if linha.lstrip().startswith(_PREFIXOS_COMENTARIO) else linha for linha in t.split("\n"))
 
 def _decodificar_base64(texto: str) -> list[str]:
     """Textos legíveis escondidos em Base64 (o formato não muda o conteúdo)."""

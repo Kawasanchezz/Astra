@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from collections.abc import Callable
 
 from rag.chunking import Trecho
 from rag.configuracao import SCORE_MINIMO, TOP_K

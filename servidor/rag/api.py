@@ -54,12 +54,12 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
             return futuro.result(timeout=limites.timeout_llm)
         except PrazoEsgotado:
             futuro.cancel()
-            raise ErroApi(504, "llm_timeout", "O modelo demorou demais para responder.")
+            raise ErroApi(504, "llm_timeout", "O modelo demorou demais para responder.") from None
         except LlmNaoConfigurado:
-            raise ErroApi(503, "llm_nao_configurado", "O modelo não está configurado neste serviço.")
+            raise ErroApi(503, "llm_nao_configurado", "O modelo não está configurado neste serviço.") from None
         except Exception as e:
             g.log["erro_tipo"] = type(e).__name__
-            raise ErroApi(502, "llm_erro", "O modelo não respondeu. Tente novamente em instantes.")
+            raise ErroApi(502, "llm_erro", "O modelo não respondeu. Tente novamente em instantes.") from e
 
     @app.before_request
     def iniciar():
@@ -132,7 +132,7 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
 
     @app.errorhandler(HTTPException)
     def erro_http(e: HTTPException):
-        codigo = _CODIGOS_HTTP.get(e.code, "requisicao_invalida")
+        codigo = _CODIGOS_HTTP.get(e.code or 400, "requisicao_invalida")
         g.setdefault("log", {})["erro_codigo"] = codigo
         return _erro(e.code or 400, codigo, "Requisição inválida." if (e.code or 400) < 500 else "Erro no servidor.")
 

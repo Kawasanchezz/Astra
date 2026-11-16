@@ -41,7 +41,7 @@ app = Flask(__name__,
             static_url_path="")
 
 if TRUSTED_PROXY_COUNT > 0:
-    app.wsgi_app = ProxyFix(
+    app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
         app.wsgi_app,
         x_for=TRUSTED_PROXY_COUNT,
         x_proto=TRUSTED_PROXY_COUNT,
@@ -78,6 +78,7 @@ def enforce_https():
         host = _HOSTS_PERMITIDOS_POR_NOME.get(request.host, _HOSTS_PERMITIDOS[0])
         caminho = _CAMINHOS_REDIRECIONAVEIS.get(request.path, "/")
         return redirect(f"https://{host}{caminho}", code=301)
+    return None
 
 _EXTENSOES_BLOQUEADAS = (".py", ".pyc", ".md", ".env", ".ini", ".cfg", ".toml",
                          ".yml", ".yaml", ".log", ".bak", ".sql", ".sqlite", ".db",
@@ -89,6 +90,7 @@ def bloquear_arquivos_sensiveis():
     partes = [p for p in caminho.split("/") if p]
     if any(p.startswith(".") for p in partes) or caminho.endswith(_EXTENSOES_BLOQUEADAS):
         return jsonify({"erro": "Nao encontrado"}), 404
+    return None
 
 @app.after_request
 def security_headers(response):
@@ -247,7 +249,7 @@ def erro_inesperado(e):
     logger.error("Excecao nao tratada: %s", type(e).__name__)
     return jsonify({"erro": "Ops, algo deu errado no servidor."}), 500
 
-def graceful_shutdown(sig, frame):
+def graceful_shutdown(_sinal, _quadro):
     logger.info("Desligando o servidor...")
     sys.exit(0)
 

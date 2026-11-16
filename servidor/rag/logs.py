@@ -1,14 +1,14 @@
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 class JsonFormatter(logging.Formatter):
     """Uma linha JSON por registro. Se a mensagem já for um dict, os campos entram direto."""
 
     def format(self, record: logging.LogRecord) -> str:
         campos = record.msg if isinstance(record.msg, dict) else {"mensagem": record.getMessage()}
-        linha = {"ts": datetime.fromtimestamp(record.created, timezone.utc).isoformat(timespec="milliseconds"),
+        linha = {"ts": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
                  "nivel": record.levelname, **campos}
         return json.dumps(linha, ensure_ascii=False)
 

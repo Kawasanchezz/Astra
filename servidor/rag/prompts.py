@@ -42,7 +42,7 @@ def carregar_prompts(pasta: Path = PROMPTS_DIR) -> Prompts:
     textos = {nome: _ler(pasta, nome) for nome in ARQUIVOS}
     resumo = hashlib.sha256()
     for nome in ARQUIVOS:
-        resumo.update(f"{nome}\0{textos[nome]}\0".encode("utf-8"))
+        resumo.update(f"{nome}\0{textos[nome]}\0".encode())
     return Prompts(
         sistema=textos["sistema.md"],
         regra=textos["regra-contexto.md"],

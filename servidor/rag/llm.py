@@ -1,3 +1,7 @@
+from typing import cast
+
+from groq.types.chat import ChatCompletionMessageParam
+
 from config import GROQ_API_KEY, GROQ_MAX_RETRIES, GROQ_MODEL, GROQ_TIMEOUT, MAX_TOKENS_RESPOSTA
 
 _cliente = None
@@ -14,7 +18,7 @@ def llm_groq(mensagens: list[dict]) -> str:
         from groq import Groq
         _cliente = Groq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES)
     resposta = _cliente.chat.completions.create(
-        model=GROQ_MODEL, messages=mensagens, temperature=0.2,
+        model=GROQ_MODEL, messages=cast(list[ChatCompletionMessageParam], mensagens), temperature=0.2,
         max_tokens=MAX_TOKENS_RESPOSTA, timeout=GROQ_TIMEOUT,
     )
     return (resposta.choices[0].message.content or "").strip()

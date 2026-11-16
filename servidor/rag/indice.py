@@ -26,7 +26,7 @@ class IndiceVetorial:
         self.modelo = modelo
 
     @classmethod
-    def construir(cls, trechos: list[Trecho], embedder: Embedder) -> "IndiceVetorial":
+    def construir(cls, trechos: list[Trecho], embedder: Embedder) -> IndiceVetorial:
         if not trechos:
             raise ValueError("nenhum trecho para indexar")
         vetores = embedder.embed([t.texto_para_embedding for t in trechos])
@@ -38,7 +38,7 @@ class IndiceVetorial:
         """Os k trechos mais parecidos, do mais para o menos, com a similaridade de cosseno."""
         consulta = np.asarray(vetor, dtype=np.float32).reshape(1, -1)
         scores, posicoes = self._indice.search(consulta, min(k, len(self.trechos)))
-        return [(self.trechos[p], float(s)) for s, p in zip(scores[0], posicoes[0]) if p != -1]
+        return [(self.trechos[p], float(s)) for s, p in zip(scores[0], posicoes[0], strict=True) if p != -1]
 
     def salvar(self, pasta: Path) -> None:
         pasta = Path(pasta)
@@ -50,7 +50,7 @@ class IndiceVetorial:
             json.dumps({"modelo": self.modelo, "trechos": len(self.trechos)}), encoding="utf-8")
 
     @classmethod
-    def carregar(cls, pasta: Path, modelo_esperado: str | None = None) -> "IndiceVetorial":
+    def carregar(cls, pasta: Path, modelo_esperado: str | None = None) -> IndiceVetorial:
         pasta = Path(pasta)
         meta = json.loads((pasta / ARQ_META).read_text(encoding="utf-8"))
         if modelo_esperado and meta["modelo"] != modelo_esperado:

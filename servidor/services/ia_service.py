@@ -1,6 +1,8 @@
 import re
 import logging
+from typing import cast
 from groq import Groq
+from groq.types.chat import ChatCompletionMessageParam
 
 from config import (
     GROQ_API_KEY, GROQ_MODEL, GROQ_TIMEOUT, GROQ_MAX_RETRIES,
@@ -13,7 +15,7 @@ from core.validador import validar_resposta
 logger = logging.getLogger(__name__)
 
 if GROQ_API_KEY and GROQ_API_KEY != "gsk_COLOQUE_SUA_CHAVE_AQUI":
-    client = Groq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES)
+    client: Groq | None = Groq(api_key=GROQ_API_KEY, max_retries=GROQ_MAX_RETRIES)
 else:
     client = None
 
@@ -36,10 +38,9 @@ def sanitizar_input(texto: str) -> str:
         return ""
     texto = texto.strip()
     texto = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", texto)
-    texto = re.sub(r"[​-‏‪-‮﻿]", "", texto)
-    return texto
+    return re.sub(r"[​-‏‪-‮﻿]", "", texto)
 
-def validar_historico(historico: list) -> list:
+def validar_historico(historico: list | None) -> list[dict[str, str]]:
     """Garante que o historico de conversa ta limpo e no tamanho certo"""
     if not historico or not isinstance(historico, list):
         return []
@@ -65,8 +66,8 @@ def validar_historico(historico: list) -> list:
     limpo.reverse()
     return limpo
 
-def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None, modelo: str = None,
-                     idioma: str = None) -> str:
+def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list | None = None,
+                      modelo: str | None = None, idioma: str | None = None) -> str:
     """
     Fluxo da resposta:
       sanitiza -> guarda de seguranca -> mascara segredos -> modelo -> valida saida
@@ -79,7 +80,7 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
     veredito = avaliar_mensagem(mensagem)
     if veredito.bloqueado:
         logger.warning("Mensagem recusada pela guarda: %s", veredito.categoria)
-        return veredito.resposta
+        return veredito.resposta or ""
 
     if client is None:
         return "O bot ta rodando sem chave da API (Modo Demo)."
@@ -91,7 +92,7 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
         instrucoes += "\n\n" + AVISO_SEGREDO
     if veredito.dado_com_instrucao:
         instrucoes += "\n\n" + AVISO_DADO_COM_INSTRUCAO
-    preferido = IDIOMAS.get(idioma, "Brazilian Portuguese")
+    preferido = IDIOMAS.get(idioma or "", "Brazilian Portuguese")
     instrucoes += ("\n\nREGRA DE IDIOMA (prioridade maxima): identifique o idioma da ULTIMA "
                    "mensagem do usuario e escreva a resposta inteira nesse idioma, mesmo que "
                    "estas instrucoes estejam em portugues. Ex.: 'hello' -> ingles; 'hola' -> "
@@ -99,8 +100,8 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
                    "nao deixar o idioma claro (apenas codigo, numeros ou palavra ambigua) ou "
                    "quando o usuario pedir esse idioma.")
 
-    messages = [{"role": "system", "content": instrucoes}]
-    messages.extend(validar_historico(historico))
+    messages: list[ChatCompletionMessageParam] = [{"role": "system", "content": instrucoes}]
+    messages.extend(cast(list[ChatCompletionMessageParam], validar_historico(historico)))
     messages.append({"role": "user", "content": mensagem})
 
     try:
@@ -113,7 +114,7 @@ def obter_resposta_ia(system_prompt: str, mensagem: str, historico: list = None,
             max_tokens=MAX_TOKENS_RESPOSTA,
             timeout=GROQ_TIMEOUT
         )
-        return validar_resposta(resp.choices[0].message.content, system_prompt)
+        return validar_resposta(resp.choices[0].message.content or "", system_prompt)
 
     except Exception as e:
         logger.error("Erro na API: %s", type(e).__name__)

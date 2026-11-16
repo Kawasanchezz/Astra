@@ -1,0 +1,23 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = ["promo", "landing-page", "ai-gateway-java", ".cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "SIM", "RET", "C4"]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "servidor:tests"
+explicit_package_bases = true
+exclude = ["promo", "landing-page", "ai-gateway-java", ".venv", ".cache"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["faiss", "faiss.*", "fastembed", "fastembed.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

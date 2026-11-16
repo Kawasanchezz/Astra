@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
 
 from rag.configuracao import MODELO_CACHE_DIR, MODELO_EMBEDDING
+
+if TYPE_CHECKING:
+    from fastembed import TextEmbedding
 
 class Embedder(Protocol):
     nome: str
@@ -26,7 +29,7 @@ class FastEmbedEmbedder:
     def __init__(self, nome: str = MODELO_EMBEDDING, pasta_cache: Path = MODELO_CACHE_DIR):
         self.nome = nome
         self._pasta_cache = pasta_cache
-        self._modelo = None
+        self._modelo: TextEmbedding | None = None
 
     def embed(self, textos: list[str]) -> np.ndarray:
         if self._modelo is None:
