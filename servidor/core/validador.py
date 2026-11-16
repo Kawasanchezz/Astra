@@ -9,6 +9,7 @@ Validação da RESPOSTA do modelo: última camada, depois da geração.
 """
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 
 from core.seguranca import CAT_PROMPT, RESPOSTAS, mascarar_segredos, normalizar
@@ -36,6 +37,19 @@ def vazou_prompt(resposta: str, system_prompt: str) -> bool:
     em_comum = _trechos(resposta) & _trechos_do_prompt(system_prompt)
     return len(em_comum) >= _TRECHOS_PARA_VAZAMENTO
 
+_BLOCO_DE_CODIGO = re.compile(r"(```.*?(?:```|\Z))", re.DOTALL)
+_IMAGEM_MARKDOWN = re.compile(r"!\[([^\]]*)\]\([^)]*\)|!\[([^\]]*)\]\[[^\]]*\]")
+_IMAGEM_HTML = re.compile(r"<img\b[^>]*>?", re.IGNORECASE)
+
+def remover_imagens(resposta: str) -> str:
+    """Tira imagens markdown e <img> fora de blocos de código: carregar uma imagem de um
+    endereço escolhido pelo modelo é um jeito de vazar a conversa na própria URL."""
+    partes = _BLOCO_DE_CODIGO.split(resposta)
+    for i in range(0, len(partes), 2):
+        sem_markdown = _IMAGEM_MARKDOWN.sub(lambda m: m.group(1) or m.group(2) or "[imagem removida]", partes[i])
+        partes[i] = _IMAGEM_HTML.sub("", sem_markdown)
+    return "".join(partes)
+
 def validar_resposta(resposta: str, system_prompt: str) -> str:
     """Devolve a resposta segura para entregar ao usuário."""
     resposta = (resposta or "").strip()
@@ -44,4 +58,4 @@ def validar_resposta(resposta: str, system_prompt: str) -> str:
     if vazou_prompt(resposta, system_prompt):
         return RESPOSTAS[CAT_PROMPT]
     resposta, _ = mascarar_segredos(resposta)
-    return resposta
+    return remover_imagens(resposta)
