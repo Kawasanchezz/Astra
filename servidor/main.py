@@ -21,7 +21,7 @@ from config import (
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
 from core.prompt_mestre import PromptMestre
-from services.ia_service import obter_resposta_ia
+from services.ia_service import FalhaLlm, obter_resposta_ia
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
@@ -189,6 +189,8 @@ def chat():
 
     try:
         resposta = obter_resposta_ia(system_prompt, mensagem, historico, modelo, idioma)
+    except FalhaLlm as falha:
+        return jsonify({"erro": falha.mensagem}), falha.status
     finally:
         _vagas_ia.release()
 
