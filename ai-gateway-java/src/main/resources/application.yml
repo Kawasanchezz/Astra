@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: ai-gateway
+
+server:
+  port: 8080
+
+astra:
+  base-url: ${ASTRA_BASE_URL:http://localhost:8000}
+  token: ${ASTRA_TOKEN:}
+  timeout-conexao: 2s
+  # O Astra corta o LLM em 25 s; este prazo precisa ser maior para receber o erro dele.
+  timeout-leitura: 30s
+
+resilience4j:
+  retry:
+    instances:
+      astra:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - dev.astra.gateway.client.AstraFalhaTransitoriaException
+        # Circuito aberto não adianta repetir.
+        ignore-exceptions:
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+  circuitbreaker:
+    instances:
+      astra:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - dev.astra.gateway.client.AstraFalhaTransitoriaException
+        # Erro de quem chamou (4xx) não conta como falha do serviço.
+        ignore-exceptions:
+          - dev.astra.gateway.client.AstraRejeitouException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
