@@ -1,4 +1,4 @@
-"""Uso (dentro de servidor/):  python -m rag indexar | buscar "pergunta" | perguntar "pergunta" | avaliar"""
+"""Uso (dentro de servidor/):  python -m rag indexar | buscar "pergunta" | perguntar "pergunta" | avaliar | servir"""
 import argparse
 import json
 import sys
@@ -60,7 +60,14 @@ def main(argv: list[str] | None = None) -> None:
     av.add_argument("--pausa", type=float, default=1.0, help="segundos entre chamadas ao LLM")
     av.add_argument("-k", type=int, default=TOP_K)
     av.add_argument("--score-minimo", type=float, default=SCORE_MINIMO)
+    sub.add_parser("servir", help="sobe a API (/ask e /health) em modo de desenvolvimento")
     args = parser.parse_args(argv)
+
+    if args.comando == "servir":
+        from rag.configuracao import API_HOST, API_PORT
+        from rag.wsgi import app
+        app.run(host=API_HOST, port=API_PORT)
+        return
 
     embedder = FastEmbedEmbedder()
     if args.comando == "indexar":

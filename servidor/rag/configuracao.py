@@ -37,3 +37,11 @@ SOBREPOSICAO = _env_int("RAG_SOBREPOSICAO", 80)
 
 TOP_K = _env_int("RAG_TOP_K", 4)
 SCORE_MINIMO = _env_float("RAG_SCORE_MINIMO", 0.35)
+
+API_HOST = os.environ.get("RAG_API_HOST", "127.0.0.1")
+API_PORT = _env_int("RAG_API_PORT", 8000)
+API_MAX_PERGUNTA = _env_int("RAG_API_MAX_PERGUNTA", 500)
+API_MAX_CORPO = _env_int("RAG_API_MAX_CORPO", 4096)
+API_TIMEOUT_LLM = _env_float("RAG_API_TIMEOUT_LLM", 25.0)
+# Se definido, /ask exige "Authorization: Bearer <token>" (chamada entre serviços).
+API_TOKEN = os.environ.get("RAG_API_TOKEN") or None
