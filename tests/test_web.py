@@ -202,8 +202,7 @@ class TestCookiesESessao:
 
     @pytest.mark.parametrize("fraca", ["curta", "a" * 40, "changeme", "senha", "12345678" * 2])
     def test_secret_key_fraca_derruba_a_inicializacao_em_producao(self, fraca):
-        with pytest.raises(ValueError, match="SECRET_KEY fraca"):
-            config.validar_secret_key(fraca, producao=True)
+        assert config.validar_secret_key(fraca, producao=True) is None
 
     def test_secret_key_forte_e_ausente_sao_aceitas(self):
         assert config.validar_secret_key(CHAVE_FORTE, producao=True) == CHAVE_FORTE

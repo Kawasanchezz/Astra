@@ -78,8 +78,9 @@ def validar_secret_key(valor: str, producao: bool) -> str | None:
         return None
     fraca = len(valor) < 32 or len(set(valor)) < 8 or valor.lower() in CHAVES_SECRETAS_FRACAS
     if fraca and producao:
-        raise ValueError("SECRET_KEY fraca: use 32 ou mais caracteres aleatorios, por exemplo "
-                         "python -c 'import secrets; print(secrets.token_hex(32))'")
+        logger.error("SECRET_KEY fraca em producao: ignorada (o app nao usa sessao). "
+                     "Use 32 ou mais caracteres aleatorios.")
+        return None
     if fraca:
         logger.warning("SECRET_KEY fraca: aceitavel so em desenvolvimento.")
     return valor
@@ -115,7 +116,15 @@ MAX_TOKENS_RESPOSTA = max(64, min(_env_int("MAX_TOKENS_RESPOSTA", 1024), 4096))
 MAX_CONCURRENT_REQUESTS = _env_int("MAX_CONCURRENT_REQUESTS", 4)
 
 RATE_LIMIT_GLOBAL = os.environ.get("RATE_LIMIT_GLOBAL", "300 per hour")
-ORCAMENTO_DIARIO_TOKENS = _env_int("ORCAMENTO_DIARIO_TOKENS", 1000000)
+
+def limite_orcamento(valor: int, producao: bool) -> int:
+    """Em producao o teto diario nunca fica desligado: valor invalido vira o padrao."""
+    if producao and valor <= 0:
+        logger.error("ORCAMENTO_DIARIO_TOKENS=%s invalido em producao: usando o padrao 1000000.", valor)
+        return 1000000
+    return valor
+
+ORCAMENTO_DIARIO_TOKENS = limite_orcamento(_env_int("ORCAMENTO_DIARIO_TOKENS", 1000000), IS_PRODUCTION)
 
 def validar_configuracao():
     """Valida a configuracao e avisa sobre riscos de seguranca no boot."""
@@ -128,9 +137,6 @@ def validar_configuracao():
                        "Defina TRUSTED_PROXY_COUNT=1 (ou o numero real de proxies).")
 
     if IS_PRODUCTION:
-        if ORCAMENTO_DIARIO_TOKENS <= 0:
-            raise ValueError("ORCAMENTO_DIARIO_TOKENS deve ser maior que 0 em producao: sem teto diario "
-                             "o custo da Groq nao tem limite.")
         if any(("localhost" in o or "127.0.0.1" in o) for o in ALLOWED_ORIGINS):
             logger.warning("ALLOWED_ORIGINS ainda aponta para localhost em producao. "
                            "Configure o dominio real (ex.: https://seu-dominio.com).")

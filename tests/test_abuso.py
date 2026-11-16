@@ -262,17 +262,13 @@ class TestLimitesDaApiDoRag:
 
 class TestOrcamentoEmProducao:
     @pytest.mark.parametrize("limite", [0, -5])
-    def test_producao_sem_teto_diario_nao_sobe(self, monkeypatch, limite):
-        import config
+    def test_producao_nunca_desliga_o_teto_diario(self, limite):
+        from config import limite_orcamento
 
-        monkeypatch.setattr(config, "IS_PRODUCTION", True)
-        monkeypatch.setattr(config, "ORCAMENTO_DIARIO_TOKENS", limite)
-        with pytest.raises(ValueError, match="ORCAMENTO_DIARIO_TOKENS"):
-            config.validar_configuracao()
+        assert limite_orcamento(limite, producao=True) == 1000000
 
-    def test_producao_com_teto_positivo_sobe(self, monkeypatch):
-        import config
+    def test_producao_mantem_teto_positivo_e_desenvolvimento_aceita_zero(self):
+        from config import limite_orcamento
 
-        monkeypatch.setattr(config, "IS_PRODUCTION", True)
-        monkeypatch.setattr(config, "ORCAMENTO_DIARIO_TOKENS", 1000)
-        config.validar_configuracao()
+        assert limite_orcamento(1000, producao=True) == 1000
+        assert limite_orcamento(0, producao=False) == 0
