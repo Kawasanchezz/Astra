@@ -1,4 +1,3 @@
-import importlib
 import json
 import threading
 from types import SimpleNamespace
@@ -175,21 +174,6 @@ class TestValidacaoDaEntrada:
         cliente = usar_llm(lambda kw: resposta_llm("ok"))
         perguntar({**MENSAGEM, "modelo": "um-modelo-caro-qualquer"})
         assert cliente.chamadas[0]["model"] == config.GROQ_MODEL
-
-
-@pytest.fixture
-def recarregar(monkeypatch):
-    def aplicar(**ambiente):
-        for nome, valor in ambiente.items():
-            monkeypatch.setenv(nome, valor)
-        importlib.reload(config)
-        importlib.reload(main)
-        return main.app
-
-    yield aplicar
-    monkeypatch.undo()
-    importlib.reload(config)
-    importlib.reload(main)
 
 
 def chamar(app, ip="10.0.0.1", **cabecalhos):

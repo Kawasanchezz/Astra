@@ -63,3 +63,23 @@ def pagina():
         contexto.add_init_script("localStorage.setItem('astra_idioma','pt-BR');")
         yield contexto.new_page()
         navegador.close()
+
+
+@pytest.fixture
+def recarregar(monkeypatch):
+    import importlib
+
+    import config
+    import main
+
+    def aplicar(**ambiente):
+        for nome, valor in ambiente.items():
+            monkeypatch.setenv(nome, valor)
+        importlib.reload(config)
+        importlib.reload(main)
+        return main.app
+
+    yield aplicar
+    monkeypatch.undo()
+    importlib.reload(config)
+    importlib.reload(main)

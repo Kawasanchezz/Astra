@@ -1,5 +1,6 @@
 import os
 import logging
+from urllib.parse import urlsplit
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -53,9 +54,37 @@ def _origens_padrao() -> str:
             return ",".join(urls)
     return "http://localhost:5000"
 
-ALLOWED_ORIGINS = [
-    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _origens_padrao()).split(",") if o.strip()
-]
+def normalizar_origens(brutas: list[str]) -> list[str]:
+    validas: list[str] = []
+    for bruta in brutas:
+        origem = bruta.strip().rstrip("/")
+        partes = urlsplit(origem)
+        invalida = (origem in ("*", "null") or partes.scheme not in ("http", "https") or not partes.netloc
+                    or bool(partes.path or partes.query or partes.fragment or partes.username))
+        if invalida:
+            logger.error("ALLOWED_ORIGINS: entrada invalida descartada (%.40r). Use origens exatas, "
+                         "como https://seu-dominio.com.", bruta)
+        elif origem not in validas:
+            validas.append(origem)
+    return validas
+
+ALLOWED_ORIGINS = normalizar_origens(os.environ.get("ALLOWED_ORIGINS", _origens_padrao()).split(","))
+
+CHAVES_SECRETAS_FRACAS = frozenset({"changeme", "secret", "senha", "password", "dev", "test", "troque", "coloque",
+                                    "example", "exemplo"})
+
+def validar_secret_key(valor: str, producao: bool) -> str | None:
+    if not valor:
+        return None
+    fraca = len(valor) < 32 or len(set(valor)) < 8 or valor.lower() in CHAVES_SECRETAS_FRACAS
+    if fraca and producao:
+        raise ValueError("SECRET_KEY fraca: use 32 ou mais caracteres aleatorios, por exemplo "
+                         "python -c 'import secrets; print(secrets.token_hex(32))'")
+    if fraca:
+        logger.warning("SECRET_KEY fraca: aceitavel so em desenvolvimento.")
+    return valor
+
+SECRET_KEY = validar_secret_key(os.environ.get("SECRET_KEY", ""), IS_PRODUCTION)
 
 RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 

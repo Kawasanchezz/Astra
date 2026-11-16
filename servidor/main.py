@@ -11,9 +11,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.serving import WSGIRequestHandler
 
 from config import (
-    ALLOWED_ORIGINS, FLASK_DEBUG, PORT,
+    ALLOWED_ORIGINS, FLASK_DEBUG, PORT, SECRET_KEY,
     MAX_REQUEST_SIZE, RATE_LIMIT_DEFAULT, RATE_LIMIT_CHAT, RATE_LIMIT_DIARIO,
     MAX_INPUT_LENGTH, RATELIMIT_STORAGE_URI, FORCE_HTTPS, RATE_LIMIT_GLOBAL,
     TRUSTED_PROXY_COUNT, ALLOWED_MODELS, GROQ_MODEL, APP_ENV, chave_groq_configurada,
@@ -52,6 +53,14 @@ if TRUSTED_PROXY_COUNT > 0:
 else:
     logger.info("ProxyFix desativado: X-Forwarded-* ignorado (IP real do socket).")
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_SIZE
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=FORCE_HTTPS or IS_PRODUCTION,
+    SESSION_COOKIE_NAME="__Host-astra" if (FORCE_HTTPS or IS_PRODUCTION) else "astra",
+)
+if SECRET_KEY:
+    app.secret_key = SECRET_KEY
 
 CORS(app, origins=ALLOWED_ORIGINS, methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type"], supports_credentials=False, max_age=600)
@@ -93,13 +102,20 @@ def bloquear_arquivos_sensiveis():
         return jsonify({"erro": "Nao encontrado"}), 404
     return None
 
+def _politica_de_cache(response):
+    if request.endpoint == "static" and response.status_code in (200, 304):
+        return "public, max-age=31536000, immutable" if request.args.get("v") else "no-cache"
+    if response.mimetype == "text/html":
+        return "no-cache"
+    return "no-store"
+
 @app.after_request
 def security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cache-Control"] = _politica_de_cache(response)
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
+    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self), payment=(), usb=()"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
@@ -115,7 +131,12 @@ def security_headers(response):
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
-        "frame-ancestors 'none'"
+        "frame-ancestors 'none'; "
+        "frame-src 'none'; "
+        "worker-src 'none'; "
+        "media-src 'none'; "
+        "manifest-src 'self'"
+        + ("; upgrade-insecure-requests" if (FORCE_HTTPS or IS_PRODUCTION) else "")
     )
     return response
 
@@ -262,8 +283,12 @@ def graceful_shutdown(_sinal, _quadro):
     logger.info("Desligando o servidor...")
     sys.exit(0)
 
+class ManipuladorSemVersoes(WSGIRequestHandler):
+    def version_string(self) -> str:
+        return "Astra"
+
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, graceful_shutdown)
     signal.signal(signal.SIGTERM, graceful_shutdown)
     logger.info("Bot rodando na porta %d", PORT)
-    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=PORT)
+    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=PORT, request_handler=ManipuladorSemVersoes)

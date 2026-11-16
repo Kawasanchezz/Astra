@@ -103,6 +103,11 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
     @app.after_request
     def finalizar(resposta: Response) -> Response:
         resposta.headers["X-Request-ID"] = g.get("id", "")
+        resposta.headers["X-Content-Type-Options"] = "nosniff"
+        resposta.headers["X-Frame-Options"] = "DENY"
+        resposta.headers["Cache-Control"] = "no-store"
+        resposta.headers["Referrer-Policy"] = "no-referrer"
+        resposta.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         logger.info({
             "evento": "requisicao", "id": g.get("id"), "metodo": request.method, "rota": request.path,
             "status": resposta.status_code,
