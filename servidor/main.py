@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 import mimetypes
@@ -5,7 +6,7 @@ import signal
 import sys
 import threading
 from urllib.parse import urlsplit
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, g, request, jsonify, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -21,10 +22,11 @@ from config import (
     CHAT_ENABLED, GROQ_MAX_RETRIES, MAX_HISTORY_CHARS, MAX_CONCURRENT_REQUESTS,
     IS_PRODUCTION, IDIOMAS, validar_configuracao
 )
+from core.logs import configurar_logs, id_atual, novo_id
 from core.prompt_mestre import PromptMestre
 from services.ia_service import FalhaLlm, obter_resposta_ia, sanitizar_input
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s")
+configurar_logs()
 logger = logging.getLogger(__name__)
 
 validar_configuracao()
@@ -111,6 +113,12 @@ def _politica_de_cache(response):
 
 @app.after_request
 def security_headers(response):
+    response.headers["X-Request-ID"] = id_atual()
+    if response.status_code >= 400 and response.is_json:
+        corpo = response.get_json(silent=True)
+        if isinstance(corpo, dict):
+            corpo.setdefault("id", id_atual())
+            response.set_data(json.dumps(corpo, ensure_ascii=False))
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Cache-Control"] = _politica_de_cache(response)
@@ -139,6 +147,10 @@ def security_headers(response):
         + ("; upgrade-insecure-requests" if (FORCE_HTTPS or IS_PRODUCTION) else "")
     )
     return response
+
+@app.before_request
+def iniciar_requisicao():
+    g.id = novo_id(request.headers.get("X-Request-ID", ""))
 
 @app.route("/")
 def index():

@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import hmac
 import logging
-import re
 import time
-import uuid
 import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as PrazoEsgotado
 from dataclasses import dataclass
@@ -14,6 +12,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import HTTPException
 
+from core.logs import novo_id
 from rag.configuracao import API_LIMITE, SCORE_MINIMO, TOP_K
 from rag.consulta import Llm, perguntar
 from rag.embeddings import Embedder
@@ -23,7 +22,6 @@ from rag.prompts import Prompts, prompts_padrao
 
 logger = logging.getLogger("rag.api")
 
-_ID_VALIDO = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 _CODIGOS_HTTP = {404: "nao_encontrado", 405: "metodo_nao_permitido", 413: "corpo_grande", 429: "limite_excedido"}
 
 @dataclass(frozen=True)
@@ -91,8 +89,7 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
     def iniciar():
         g.inicio = time.perf_counter()
         g.log = {}
-        recebido = request.headers.get("X-Request-ID", "")
-        g.id = recebido if _ID_VALIDO.match(recebido) else uuid.uuid4().hex[:16]
+        g.id = novo_id(request.headers.get("X-Request-ID", ""))
         if request.content_length and request.content_length > limites.max_corpo:
             raise ErroApi(413, "corpo_grande", f"O corpo passa de {limites.max_corpo} bytes.")
         if token and request.path == "/ask":

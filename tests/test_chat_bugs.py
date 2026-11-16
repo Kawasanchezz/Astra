@@ -63,7 +63,7 @@ class TestFalhasDoLlm:
             resposta = perguntar(MENSAGEM)
         assert resposta.status_code == status
         corpo = resposta.get_json()
-        assert list(corpo) == ["erro"] and "detalhe-interno-secreto" not in resposta.get_data(as_text=True)
+        assert sorted(corpo) == ["erro", "id"] and "detalhe-interno-secreto" not in resposta.get_data(as_text=True)
         registro = next(r.getMessage() for r in caplog.records if "Falha na LLM" in r.getMessage())
         assert f"motivo={motivo}" in registro and "detalhe-interno-secreto" not in registro
 

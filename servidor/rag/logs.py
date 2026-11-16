@@ -3,6 +3,8 @@ import logging
 import sys
 from datetime import UTC, datetime
 
+from core.logs import FiltroDeLog
+
 class JsonFormatter(logging.Formatter):
     """Uma linha JSON por registro. Se a mensagem já for um dict, os campos entram direto."""
 
@@ -19,6 +21,7 @@ def configurar_logs(nivel: int = logging.INFO) -> None:
         return
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
+    handler.addFilter(FiltroDeLog())
     logger.addHandler(handler)
     logger.setLevel(nivel)
     logger.propagate = False

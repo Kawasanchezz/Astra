@@ -224,7 +224,7 @@ class TestErrosNaoVazamDetalhes:
 
         resposta = app.test_client().get("/_explode")
         texto = resposta.get_data(as_text=True)
-        assert resposta.status_code == 500 and resposta.get_json() == {"erro": "Ops, algo deu errado no servidor."}
+        assert resposta.status_code == 500 and resposta.get_json()["erro"] == "Ops, algo deu errado no servidor."
         assert "segredo-interno" not in texto and "Traceback" not in texto and ".py" not in texto
         assert "segredo-interno" not in caplog.text
 
