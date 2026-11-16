@@ -64,7 +64,7 @@ def sanitizar_input(texto: str) -> str:
         return ""
     texto = texto.strip()
     texto = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", texto)
-    texto = re.sub(r"[​-‏‪-‮﻿]", "", texto)
+    texto = re.sub(r"[\u200b-\u200f\u202a-\u202e\ufeff]", "", texto)
     return re.sub(r"[\ud800-\udfff]", "", texto).strip()
 
 def validar_historico(historico: list | None) -> list[dict[str, str]]:
