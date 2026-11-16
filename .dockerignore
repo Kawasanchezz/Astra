@@ -8,8 +8,14 @@ landing-page
 ai-gateway-java
 avaliacao
 tests
+docs/*.md
+*.md
+pyproject.toml
 **/__pycache__
 **/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
 
 # Segredos nunca entram na imagem (a chave chega por variável de ambiente).
 **/.env
