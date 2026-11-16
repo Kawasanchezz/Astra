@@ -47,6 +47,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @SpringBootTest(properties = {
+        "gateway.limite-por-minuto=100000",
         "astra.token=token-de-teste",
         "astra.timeout-leitura=1s",
         "resilience4j.retry.instances.astra.wait-duration=10ms",

@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @SpringBootTest(properties = {
+        "gateway.limite-por-minuto=100000",
         "astra.base-url=http://127.0.0.1:1",
         "astra.timeout-conexao=1s",
         "resilience4j.retry.instances.astra.wait-duration=10ms",
