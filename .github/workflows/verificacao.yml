@@ -46,12 +46,16 @@ jobs:
           cache: pip
       - name: Instalar dependências de desenvolvimento
         run: pip install -r requirements-dev.txt
+      - name: Instalar o Chromium do Playwright (testes de XSS e CSP no navegador)
+        run: playwright install --with-deps chromium
       - name: Lint
         run: ruff check .
       - name: Tipos
         run: mypy servidor
       - name: Testes (o LLM é simulado, não usa chave real)
         run: pytest -q
+        env:
+          GROQ_API_KEY: chave-falsa-para-teste
 
   gateway-java:
     name: Testes do gateway Java
