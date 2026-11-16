@@ -3,7 +3,7 @@
 
 -r requirements-rag.txt
 
-pytest>=8,<10             # testes (pytest tests/)
+pytest>=9.2.0,<10             # testes (pytest tests/)
 playwright>=1.49,<2       # testes de XSS/CSP no navegador (playwright install chromium)
 ruff>=0.8,<1              # lint
 mypy>=1.13,<3             # tipos
