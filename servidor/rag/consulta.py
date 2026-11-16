@@ -9,6 +9,7 @@ from rag.configuracao import SCORE_MINIMO, TOP_K
 from rag.embeddings import Embedder
 from rag.indice import IndiceVetorial
 from rag.prompts import Prompts, prompts_padrao
+from core.validador import validar_resposta
 
 SEM_CONTEXTO = "Não encontrei isso nos documentos indexados, então prefiro não responder."
 
@@ -57,5 +58,6 @@ def perguntar(pergunta: str, indice: IndiceVetorial, embedder: Embedder, llm: Ll
     encontrados = buscar_contexto(indice, embedder, pergunta, k, score_minimo)
     if not encontrados:
         return Resposta(SEM_CONTEXTO, [], usou_llm=False, versao_prompt=prompts.versao)
-    texto = llm(montar_mensagens(pergunta, encontrados, prompts))
+    bruto = llm(montar_mensagens(pergunta, encontrados, prompts))
+    texto = validar_resposta(bruto, prompts.mensagem_sistema) if bruto.strip() else bruto
     return Resposta(texto, encontrados, usou_llm=True, versao_prompt=prompts.versao)

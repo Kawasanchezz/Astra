@@ -43,4 +43,5 @@ def llm_groq(mensagens: list[dict]) -> str:
         raise
     gasto_real = getattr(getattr(resposta, "usage", None), "total_tokens", None)
     orcamento_diario.acertar(estimativa, gasto_real if isinstance(gasto_real, int) else None)
-    return (resposta.choices[0].message.content or "").strip()
+    conteudo = resposta.choices[0].message.content if resposta.choices else None
+    return (conteudo or "").strip()

