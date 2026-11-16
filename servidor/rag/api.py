@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import uuid
+import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as PrazoEsgotado
 from dataclasses import dataclass
 
@@ -29,6 +30,7 @@ class Limites:
     max_corpo: int = 4096
     timeout_llm: float = 25.0
     max_k: int = 10
+    max_concorrencia: int = 4
 
 class ErroApi(Exception):
     def __init__(self, status: int, codigo: str, mensagem: str):
@@ -45,13 +47,27 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = limites.max_corpo
     prompts = prompts or prompts_padrao()
-    executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="llm")
+    executor = ThreadPoolExecutor(max_workers=limites.max_concorrencia, thread_name_prefix="llm")
+    vagas = threading.BoundedSemaphore(limites.max_concorrencia)
 
     def llm_com_prazo(mensagens: list[dict]) -> str:
         """Chama o LLM com prazo. Qualquer falha vira um erro HTTP genérico, sem vazar detalhe interno."""
-        futuro = executor.submit(llm, mensagens)
+        if not vagas.acquire(blocking=False):
+            raise ErroApi(503, "servidor_ocupado", "Há perguntas demais em andamento. Tente em instantes.")
+
+        def chamar() -> str:
+            try:
+                return llm(mensagens)
+            finally:
+                vagas.release()
+
         try:
-            return futuro.result(timeout=limites.timeout_llm)
+            futuro = executor.submit(chamar)
+        except RuntimeError:
+            vagas.release()
+            raise
+        try:
+            texto = futuro.result(timeout=limites.timeout_llm)
         except PrazoEsgotado:
             futuro.cancel()
             raise ErroApi(504, "llm_timeout", "O modelo demorou demais para responder.") from None
@@ -60,6 +76,9 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
         except Exception as e:
             g.log["erro_tipo"] = type(e).__name__
             raise ErroApi(502, "llm_erro", "O modelo não respondeu. Tente novamente em instantes.") from e
+        if not texto.strip():
+            raise ErroApi(502, "llm_resposta_vazia", "O modelo não devolveu resposta. Tente reformular a pergunta.")
+        return texto
 
     @app.before_request
     def iniciar():
@@ -106,6 +125,10 @@ def criar_app(indice: IndiceVetorial | None, embedder: Embedder, llm: Llm, promp
         pergunta = pergunta.strip()
         if not pergunta:
             raise ErroApi(400, "pergunta_vazia", "A pergunta está vazia.")
+        try:
+            pergunta.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ErroApi(400, "pergunta_invalida", "A pergunta tem caracteres inválidos.") from None
         if len(pergunta) > limites.max_pergunta:
             raise ErroApi(400, "pergunta_longa", f"A pergunta passa de {limites.max_pergunta} caracteres.")
         k = dados.get("k", k_padrao)

@@ -12,6 +12,11 @@ from rag.consulta import buscar_contexto, perguntar
 from rag.embeddings import FastEmbedEmbedder
 from rag.indice import IndiceVetorial, indexar_pasta
 
+def configurar_saida_utf8() -> None:
+    for fluxo in (sys.stdout, sys.stderr):
+        if hasattr(fluxo, "reconfigure"):
+            fluxo.reconfigure(encoding="utf-8", errors="replace")
+
 def _carregar() -> IndiceVetorial:
     try:
         return IndiceVetorial.carregar(INDEX_DIR, modelo_esperado=MODELO_EMBEDDING)
@@ -45,6 +50,7 @@ def _avaliar(args, embedder) -> None:
         print("Resultado completo em", args.saida)
 
 def main(argv: list[str] | None = None) -> None:
+    configurar_saida_utf8()
     parser = argparse.ArgumentParser(prog="python -m rag")
     sub = parser.add_subparsers(dest="comando", required=True)
     sub.add_parser("indexar", help="indexa os .md da pasta de documentos")

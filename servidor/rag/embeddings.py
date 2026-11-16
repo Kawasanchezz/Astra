@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
@@ -30,10 +31,15 @@ class FastEmbedEmbedder:
         self.nome = nome
         self._pasta_cache = pasta_cache
         self._modelo: TextEmbedding | None = None
+        self._trava_modelo = threading.Lock()
 
     def embed(self, textos: list[str]) -> np.ndarray:
-        if self._modelo is None:
-            from fastembed import TextEmbedding
-            self._modelo = TextEmbedding(self.nome, cache_dir=str(self._pasta_cache))
-        matriz = np.array(list(self._modelo.embed(textos)), dtype=np.float32)
+        matriz = np.array(list(self._carregar_modelo().embed(textos)), dtype=np.float32)
         return normalizar_linhas(matriz)
+
+    def _carregar_modelo(self) -> TextEmbedding:
+        with self._trava_modelo:
+            if self._modelo is None:
+                from fastembed import TextEmbedding
+                self._modelo = TextEmbedding(self.nome, cache_dir=str(self._pasta_cache))
+            return self._modelo
